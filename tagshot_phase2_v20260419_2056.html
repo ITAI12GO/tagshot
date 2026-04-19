@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>TagShot — Phase 2</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overscroll-behavior: none; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: #0a0a0a;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
+    input { font-family: inherit; }
+
+    /* ============ JOIN SCREEN ============ */
+    .join-screen {
+      position: fixed;
+      inset: 0;
+      background: #0a0a0a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 100;
+    }
+    .join-screen.hidden { display: none; }
+    .logo { font-size: 56px; margin-bottom: 8px; }
+    .title { font-size: 24px; font-weight: 600; }
+    .subtitle { font-size: 13px; color: #888; margin-top: 4px; margin-bottom: 30px; }
+    .name-input {
+      width: 100%;
+      max-width: 320px;
+      padding: 14px 16px;
+      font-size: 17px;
+      background: #1e1e1e;
+      color: white;
+      border: 1px solid #333;
+      border-radius: 10px;
+      outline: none;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+    .name-input:focus { border-color: #ff3b3b; }
+    .join-btn {
+      width: 100%;
+      max-width: 320px;
+      padding: 14px;
+      font-size: 17px;
+      font-weight: 600;
+      background: #ff3b3b;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .join-btn:active { transform: scale(0.97); }
+    .join-btn:disabled { background: #444; }
+    .conn-status {
+      margin-top: 24px;
+      font-size: 12px;
+      color: #666;
+    }
+    .conn-status.ok { color: #4ade80; }
+    .conn-status.err { color: #ff3b3b; }
+
+    /* ============ GAME HEADER (SCOREBOARD) ============ */
+    header {
+      padding: 8px 12px;
+      background: #141414;
+      border-bottom: 1px solid #2a2a2a;
+      flex-shrink: 0;
+    }
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .game-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .game-title .you { color: #4ade80; font-size: 11px; margin-left: 6px; }
+    .phase-tag { font-size: 10px; color: #666; }
+    .scoreboard {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 4px;
+    }
+    .score-chip {
+      flex-shrink: 0;
+      padding: 4px 10px;
+      background: #1e1e1e;
+      border-radius: 6px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .score-chip.me { background: #2d4a2f; }
+    .score-chip .pts { color: #ff3b3b; font-weight: 600; }
+    .score-chip.me .pts { color: #4ade80; }
+
+    /* ============ CAMERA AREA ============ */
+    .video-container {
+      flex: 1;
+      position: relative;
+      background: #000;
+      overflow: hidden;
+    }
+    video { width: 100%; height: 100%; object-fit: cover; }
+    canvas { display: none; }
+
+    .reticle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 220px;
+      height: 220px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-radius: 12px;
+      pointer-events: none;
+    }
+    .reticle-corner {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border: 3px solid #ff3b3b;
+    }
+    .reticle-corner.tl { top: -2px; left: -2px; border-right: none; border-bottom: none; border-radius: 12px 0 0 0; }
+    .reticle-corner.tr { top: -2px; right: -2px; border-left: none; border-bottom: none; border-radius: 0 12px 0 0; }
+    .reticle-corner.bl { bottom: -2px; left: -2px; border-right: none; border-top: none; border-radius: 0 0 0 12px; }
+    .reticle-corner.br { bottom: -2px; right: -2px; border-left: none; border-top: none; border-radius: 0 0 12px 0; }
+
+    .flash {
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 59, 59, 0.5);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.08s;
+      z-index: 5;
+    }
+    .flash.active { opacity: 1; }
+    .flash.hit-flash { background: rgba(74, 222, 128, 0.5); }
+    .flash.victim-flash { background: rgba(255, 59, 59, 0.8); }
+
+    .hit-toast {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.85);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 6;
+      border: 2px solid #4ade80;
+      max-width: 90%;
+      text-align: center;
+    }
+    .hit-toast.active { opacity: 1; }
+    .hit-toast.victim { border-color: #ff3b3b; background: rgba(80,0,0,0.9); }
+
+    /* ============ BOTTOM CONTROLS ============ */
+    footer {
+      padding: 10px 12px 14px;
+      background: #141414;
+      border-top: 1px solid #2a2a2a;
+      flex-shrink: 0;
+    }
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .ctrl-btn {
+      flex: 1;
+      padding: 12px 8px;
+      font-size: 14px;
+      font-weight: 600;
+      background: #1e1e1e;
+      color: white;
+      border: 1px solid #333;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .ctrl-btn:active { transform: scale(0.97); background: #2a2a2a; }
+    .ctrl-btn.primary { background: #ff3b3b; border-color: #ff3b3b; }
+    .ctrl-btn.danger { background: #1e1e1e; color: #ff9999; border-color: #4a1f1f; }
+
+    .status {
+      font-size: 11px;
+      color: #666;
+      text-align: center;
+      margin-top: 4px;
+    }
+    .status.ok { color: #4ade80; }
+    .status.err { color: #ff3b3b; }
+
+    /* ============ QR MODAL ============ */
+    .qr-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.95);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 50;
+    }
+    .qr-modal.active { display: flex; }
+    .qr-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .qr-sub {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 24px;
+      text-align: center;
+      max-width: 280px;
+    }
+    .qr-box {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+    }
+    .qr-box img, .qr-box canvas {
+      display: block;
+      width: 260px;
+      height: 260px;
+    }
+    .qr-playerid {
+      margin-top: 16px;
+      font-family: ui-monospace, "SF Mono", Consolas, monospace;
+      font-size: 12px;
+      color: #888;
+    }
+    .qr-close {
+      margin-top: 28px;
+      padding: 12px 40px;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="join-screen" id="joinScreen">
+    <div class="logo">🎯</div>
+    <div class="title">TagShot</div>
+    <div class="subtitle">Phase 2 · 2-player scoring · v20260419_2056</div>
+    <input type="text" class="name-input" id="nameInput" placeholder="Enter your name" maxlength="20" autocomplete="off">
+    <button class="join-btn" id="joinBtn" disabled>Join Game</button>
+    <div class="conn-status" id="connStatus">Connecting to Firebase…</div>
+  </div>
+
+  <header>
+    <div class="header-top">
+      <div class="game-title">🎯 TagShot <span class="you" id="youLabel"></span></div>
+      <div class="phase-tag">Phase 2</div>
+    </div>
+    <div class="scoreboard" id="scoreboard">
+      <div class="score-chip">Waiting for players…</div>
+    </div>
+  </header>
+
+  <div class="video-container">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+    <div class="reticle">
+      <div class="reticle-corner tl"></div>
+      <div class="reticle-corner tr"></div>
+      <div class="reticle-corner bl"></div>
+      <div class="reticle-corner br"></div>
+    </div>
+    <div class="flash" id="flash"></div>
+    <div class="hit-toast" id="hitToast"></div>
+  </div>
+
+  <footer>
+    <div class="btn-row">
+      <button class="ctrl-btn primary" id="showQrBtn">📱 My QR</button>
+      <button class="ctrl-btn" id="resetBtn">♻️ Reset Scores</button>
+      <button class="ctrl-btn danger" id="leaveBtn">Leave</button>
+    </div>
+    <div class="status ok" id="status">Point reticle at a player's QR to tag them</div>
+  </footer>
+
+  <div class="qr-modal" id="qrModal">
+    <div class="qr-title">Your player badge</div>
+    <div class="qr-sub">Show this to other players' cameras to let them tag you.</div>
+    <div class="qr-box">
+      <img id="qrImg" alt="Your QR code">
+    </div>
+    <div class="qr-playerid" id="qrPlayerId"></div>
+    <button class="qr-close" id="qrCloseBtn">Close</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getDatabase, ref, set, onValue, onDisconnect, remove, update, serverTimestamp, get
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBA_OKVuQWtetNp_5iPihL8SZ28FWt1hQY",
+      authDomain: "tagshot-852d2.firebaseapp.com",
+      databaseURL: "https://tagshot-852d2-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "tagshot-852d2",
+      storageBucket: "tagshot-852d2.firebasestorage.app",
+      messagingSenderId: "476973459500",
+      appId: "1:476973459500:web:292232b4e05cc3a06a0989"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const ROOM = "lobby";
+    const HIT_COOLDOWN_MS = 3000;
+    const QR_PREFIX = "TAGSHOT::";
+
+    let myId = null;
+    let myName = "";
+    let players = {};
+    let lastHitTargets = {};
+    let lastScanRaw = '';
+    let lastScanTime = 0;
+
+    const $ = id => document.getElementById(id);
+
+    function setConn(msg, cls) {
+      const el = $('connStatus');
+      el.textContent = msg;
+      el.className = 'conn-status' + (cls ? ' ' + cls : '');
+    }
+    function setStatus(msg, cls) {
+      const el = $('status');
+      el.textContent = msg;
+      el.className = 'status' + (cls ? ' ' + cls : '');
+    }
+
+    // Verify DB connection
+    const connRef = ref(db, '.info/connected');
+    onValue(connRef, snap => {
+      if (snap.val() === true) setConn('Connected to Firebase ✓', 'ok');
+      else setConn('Offline — trying to reconnect…', 'err');
+    });
+
+    // --- Name input ---
+    const nameInput = $('nameInput');
+    const joinBtn = $('joinBtn');
+    nameInput.addEventListener('input', () => {
+      joinBtn.disabled = nameInput.value.trim().length < 1;
+    });
+    nameInput.addEventListener('keypress', e => {
+      if (e.key === 'Enter' && !joinBtn.disabled) joinBtn.click();
+    });
+
+    // --- Join ---
+    joinBtn.addEventListener('click', async () => {
+      const name = nameInput.value.trim().slice(0, 20);
+      if (!name) return;
+      myName = name;
+      myId = 'p_' + Math.random().toString(36).slice(2, 9);
+
+      const playerRef = ref(db, `rooms/${ROOM}/players/${myId}`);
+      await set(playerRef, {
+        name: myName,
+        score: 0,
+        joinedAt: serverTimestamp()
+      });
+      onDisconnect(playerRef).remove();
+
+      $('youLabel').textContent = '· ' + myName;
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+          audio: false
+        });
+        $('video').srcObject = stream;
+        await $('video').play();
+        $('joinScreen').classList.add('hidden');
+        setStatus('Point reticle at a player\'s QR to tag them', 'ok');
+        requestAnimationFrame(scanLoop);
+        subscribeToRoom();
+      } catch (err) {
+        setConn('Camera error: ' + (err.message || err.name), 'err');
+      }
+    });
+
+    // --- Subscribe to room updates ---
+    function subscribeToRoom() {
+      const playersRef = ref(db, `rooms/${ROOM}/players`);
+      onValue(playersRef, snap => {
+        players = snap.val() || {};
+        renderScoreboard();
+      });
+
+      const hitsRef = ref(db, `rooms/${ROOM}/hits`);
+      onValue(hitsRef, snap => {
+        const hits = snap.val() || {};
+        for (const key of Object.keys(hits)) {
+          const hit = hits[key];
+          if (hit.victimId === myId && hit.seenBy && hit.seenBy[myId]) continue;
+          if (hit.victimId === myId) {
+            showVictimFlash(hit.shooterName || 'Someone');
+            update(ref(db, `rooms/${ROOM}/hits/${key}/seenBy`), { [myId]: true });
+          }
+        }
+      });
+    }
+
+    // --- Render scoreboard ---
+    function renderScoreboard() {
+      const sb = $('scoreboard');
+      const entries = Object.entries(players).sort((a, b) => (b[1].score || 0) - (a[1].score || 0));
+      if (entries.length === 0) {
+        sb.innerHTML = '<div class="score-chip">Waiting for players…</div>';
+        return;
+      }
+      sb.innerHTML = entries.map(([id, p]) => {
+        const isMe = id === myId;
+        return `<div class="score-chip ${isMe ? 'me' : ''}">${escapeHtml(p.name || '?')} <span class="pts">${p.score || 0}</span></div>`;
+      }).join('');
+    }
+
+    // --- Camera scan loop ---
+    const video = $('video');
+    const canvas = $('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    function scanLoop() {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        try {
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+          if (code && code.data) handleScan(code.data);
+        } catch (e) { /* swallow */ }
+      }
+      requestAnimationFrame(scanLoop);
+    }
+
+    function handleScan(raw) {
+      const now = Date.now();
+      if (raw === lastScanRaw && (now - lastScanTime) < 500) return;
+      lastScanRaw = raw;
+      lastScanTime = now;
+
+      if (!raw.startsWith(QR_PREFIX)) {
+        setStatus('Not a TagShot QR — ignoring', 'err');
+        setTimeout(() => setStatus('Point reticle at a player\'s QR to tag them', 'ok'), 1500);
+        return;
+      }
+      const targetId = raw.slice(QR_PREFIX.length);
+      if (targetId === myId) {
+        setStatus('That\'s your own QR!', 'err');
+        setTimeout(() => setStatus('Point reticle at a player\'s QR to tag them', 'ok'), 1500);
+        return;
+      }
+      if (!players[targetId]) {
+        setStatus('Unknown player — they may have left', 'err');
+        setTimeout(() => setStatus('Point reticle at a player\'s QR to tag them', 'ok'), 1500);
+        return;
+      }
+      const lastHit = lastHitTargets[targetId] || 0;
+      if ((now - lastHit) < HIT_COOLDOWN_MS) {
+        const wait = Math.ceil((HIT_COOLDOWN_MS - (now - lastHit)) / 1000);
+        setStatus(`Cooldown on ${players[targetId].name} — ${wait}s`, 'err');
+        return;
+      }
+      lastHitTargets[targetId] = now;
+      scoreHit(targetId);
+    }
+
+    async function scoreHit(targetId) {
+      const victimName = players[targetId]?.name || 'Player';
+
+      try {
+        const mySnap = await get(ref(db, `rooms/${ROOM}/players/${myId}/score`));
+        const currentScore = mySnap.val() || 0;
+        await set(ref(db, `rooms/${ROOM}/players/${myId}/score`), currentScore + 1);
+
+        const hitKey = 'h_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+        await set(ref(db, `rooms/${ROOM}/hits/${hitKey}`), {
+          shooterId: myId,
+          shooterName: myName,
+          victimId: targetId,
+          victimName: victimName,
+          timestamp: serverTimestamp(),
+          seenBy: { [myId]: true }
+        });
+
+        showHitFlash(victimName);
+      } catch (err) {
+        setStatus('Hit failed: ' + err.message, 'err');
+      }
+    }
+
+    function showHitFlash(victimName) {
+      const flash = $('flash');
+      flash.className = 'flash hit-flash active';
+      setTimeout(() => flash.className = 'flash', 100);
+      const toast = $('hitToast');
+      toast.textContent = `🎯 Tagged ${victimName}! +1`;
+      toast.className = 'hit-toast active';
+      setTimeout(() => toast.className = 'hit-toast', 1500);
+      if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+    }
+
+    function showVictimFlash(shooterName) {
+      const flash = $('flash');
+      flash.className = 'flash victim-flash active';
+      setTimeout(() => flash.className = 'flash', 150);
+      const toast = $('hitToast');
+      toast.textContent = `💥 ${shooterName} tagged you!`;
+      toast.className = 'hit-toast victim active';
+      setTimeout(() => toast.className = 'hit-toast', 1800);
+      if (navigator.vibrate) navigator.vibrate([150, 80, 150, 80, 150]);
+    }
+
+    // --- QR display modal ---
+    $('showQrBtn').addEventListener('click', () => {
+      if (!myId) return;
+      const payload = QR_PREFIX + myId;
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=520x520&margin=10&data=${encodeURIComponent(payload)}`;
+      $('qrImg').src = qrUrl;
+      $('qrPlayerId').textContent = 'ID: ' + myId;
+      $('qrModal').classList.add('active');
+    });
+    $('qrCloseBtn').addEventListener('click', () => {
+      $('qrModal').classList.remove('active');
+    });
+
+    // --- Reset scores (affects everyone in the room) ---
+    $('resetBtn').addEventListener('click', async () => {
+      if (!confirm('Reset all scores for everyone in the game?')) return;
+      const updates = {};
+      for (const id of Object.keys(players)) {
+        updates[`rooms/${ROOM}/players/${id}/score`] = 0;
+      }
+      updates[`rooms/${ROOM}/hits`] = null;
+      await update(ref(db), updates);
+      lastHitTargets = {};
+      setStatus('Scores reset', 'ok');
+    });
+
+    // --- Leave ---
+    $('leaveBtn').addEventListener('click', async () => {
+      if (!confirm('Leave the game?')) return;
+      if (myId) {
+        await remove(ref(db, `rooms/${ROOM}/players/${myId}`));
+      }
+      location.reload();
+    });
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+  </script>
+</body>
+</html>
