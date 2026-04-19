@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>TagShot — Phase 3</title>
+  <title>TagShot — Phase 3.1 (Host Dashboard)</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; overscroll-behavior: none; }
@@ -226,6 +226,86 @@
     }
     .debug-banner.active { display: block; }
 
+    .host-dash {
+      position: absolute; inset: 0;
+      padding: 12px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      background: #0a0a0a;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .host-dash-header {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 13px; color: #888;
+    }
+    .host-dash-header .label { font-weight: 600; color: #4ade80; }
+
+    .filter-row {
+      background: #151515; border: 1px solid #2a2a2a; border-radius: 10px; padding: 8px;
+    }
+    .filter-row .filter-label { font-size: 11px; color: #888; margin-bottom: 6px; }
+    .filter-row .seg-mini { display: flex; background: #1e1e1e; border-radius: 8px; padding: 3px; margin-bottom: 6px; }
+    .filter-row .seg-mini button {
+      flex: 1; padding: 6px; border: none; background: transparent;
+      color: #888; font-size: 12px; font-weight: 600; border-radius: 6px;
+    }
+    .filter-row .seg-mini button.active { background: #ff3b3b; color: white; }
+
+    .dash-panel {
+      background: #151515; border: 1px solid #2a2a2a;
+      border-radius: 10px; padding: 10px 12px;
+    }
+    .dash-panel .panel-title {
+      font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px;
+      margin-bottom: 8px; font-weight: 600;
+    }
+
+    .lb-list { display: flex; flex-direction: column; gap: 5px; }
+    .lb-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; background: #1e1e1e; border-radius: 8px;
+      font-size: 13px;
+    }
+    .lb-item.rank-1 { background: linear-gradient(90deg, #3d2a00 0%, #1e1e1e 60%); border-left: 3px solid #fbbf24; }
+    .lb-item.rank-2 { background: linear-gradient(90deg, #2a2a2a 0%, #1e1e1e 60%); border-left: 3px solid #cbd5e1; }
+    .lb-item.rank-3 { background: linear-gradient(90deg, #3a2410 0%, #1e1e1e 60%); border-left: 3px solid #b45309; }
+    .lb-item .rank {
+      font-size: 16px; font-weight: 700; width: 28px; text-align: center; flex-shrink: 0;
+    }
+    .lb-item .name { flex: 1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lb-item .stats { display: flex; gap: 8px; font-family: ui-monospace, monospace; font-size: 11px; }
+    .lb-item .stats .k { color: #4ade80; }
+    .lb-item .stats .d { color: #ff9999; }
+    .lb-item .stats .r { color: #93c5fd; }
+    .lb-item .last-tag { font-size: 10px; color: #666; margin-left: 6px; font-style: italic; }
+
+    .feed-list {
+      display: flex; flex-direction: column; gap: 4px;
+      max-height: 280px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    }
+    .feed-item {
+      display: flex; justify-content: space-between; gap: 8px;
+      padding: 6px 8px; background: #1e1e1e; border-radius: 6px;
+      font-size: 12px; opacity: 0.45; transition: opacity 0.3s;
+    }
+    .feed-item.recent {
+      opacity: 1;
+      background: #2d1a1a; border-left: 2px solid #ff3b3b;
+    }
+    .feed-item.recent-1 { background: #3d1515; border-left-color: #ff3b3b; }
+    .feed-item.recent-2 { background: #331919; border-left-color: #ff6b3b; }
+    .feed-item.recent-3 { background: #2d1e1e; border-left-color: #ff8b5b; }
+    .feed-item.recent-4 { background: #2a2121; border-left-color: #ffa57b; }
+    .feed-item.recent-5 { background: #272525; border-left-color: #ffbb9b; }
+    .feed-item .feed-text { flex: 1; }
+    .feed-item .feed-text .shooter { color: #4ade80; font-weight: 600; }
+    .feed-item .feed-text .victim { color: #ff9999; font-weight: 600; }
+    .feed-item .feed-time { color: #666; font-family: ui-monospace, monospace; font-size: 10px; flex-shrink: 0; }
+
+    .dash-empty {
+      padding: 20px; text-align: center; color: #555; font-size: 12px;
+    }
+
     .conn-pill {
       display: inline-block; padding: 3px 8px; border-radius: 12px;
       font-size: 11px; margin-left: 8px;
@@ -242,7 +322,7 @@
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="font-size: 56px;">🎯</div>
       <div class="h1">TagShot</div>
-      <div class="sub">Phase 3 · Rooms & host · v20260419_2158<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
+      <div class="sub">Phase 3.1 · Host dashboard · v20260419_2244<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
     </div>
 
     <button class="btn primary" id="toCreateBtn">🏠 Create Room</button>
@@ -350,10 +430,35 @@
   </div>
 
   <div class="video-container spec" id="specContainer" style="display:none;">
-    <div style="text-align:center;padding:20px;">
-      <div style="font-size:48px;">👁️</div>
-      <div style="margin-top:12px;font-weight:600;color:#ccc;">Spectator mode</div>
-      <div style="margin-top:4px;font-size:12px;">You're moderating — watch the scoreboard.</div>
+    <div class="host-dash">
+      <div class="host-dash-header">
+        <div><span class="label">👁️ Host Dashboard</span> · live</div>
+        <div id="dashPlayerCount">0 players</div>
+      </div>
+
+      <div class="filter-row">
+        <div class="filter-label">Show top N by:</div>
+        <div class="seg-mini" id="sortSeg">
+          <button data-sort="kills" class="active">Kills</button>
+          <button data-sort="kd">K/D ratio</button>
+        </div>
+        <div class="seg-mini" id="topNSeg">
+          <button data-n="3">Top 3</button>
+          <button data-n="5">Top 5</button>
+          <button data-n="10">Top 10</button>
+          <button data-n="0" class="active">All</button>
+        </div>
+      </div>
+
+      <div class="dash-panel">
+        <div class="panel-title">Live Leaderboard</div>
+        <div id="hostLeaderboard" class="lb-list"><div class="dash-empty">Waiting for players…</div></div>
+      </div>
+
+      <div class="dash-panel">
+        <div class="panel-title">Kill Feed — top 5 highlighted</div>
+        <div id="killFeed" class="feed-list"><div class="dash-empty">No tags yet</div></div>
+      </div>
     </div>
   </div>
 
@@ -426,6 +531,9 @@
     let mediaStream = null;
     let timerInterval = null;
     let selectedDuration = 10;
+    let dashSortBy = 'kills';
+    let dashTopN = 0;
+    let dashRepaintInterval = null;
 
     const $ = id => document.getElementById(id);
     const showScreen = id => {
@@ -593,6 +701,7 @@
         players = r.players || {};
         renderPlayerList();
         renderScoreboard();
+        renderHostDashboard();
         handleRoomState(r);
       });
 
@@ -606,6 +715,7 @@
             update(ref(db, `rooms/${roomCode}/hits/${key}/seenBy`), { [myId]: true });
           }
         }
+        renderHostDashboard();
       });
     }
 
@@ -635,6 +745,126 @@
         return `<div class="score-chip ${isMe ? 'me' : ''}">${escapeHtml(p.name || '?')} <span class="pts">${p.score || 0}</span></div>`;
       }).join('');
     }
+
+    function computeLastTagged() {
+      const latestByShooter = {};
+      const hitList = Object.values(hits || {});
+      hitList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      for (const h of hitList) {
+        if (!h || !h.shooterId) continue;
+        if (!latestByShooter[h.shooterId]) {
+          latestByShooter[h.shooterId] = { victimName: h.victimName, ts: h.timestamp };
+        }
+      }
+      return latestByShooter;
+    }
+
+    function fmtTimeAgo(ts) {
+      if (!ts) return '';
+      const diffSec = Math.floor((Date.now() - ts) / 1000);
+      if (diffSec < 5) return 'just now';
+      if (diffSec < 60) return diffSec + 's ago';
+      if (diffSec < 3600) return Math.floor(diffSec / 60) + 'm ago';
+      return Math.floor(diffSec / 3600) + 'h ago';
+    }
+
+    function fmtClockTime(ts) {
+      if (!ts) return '';
+      const d = new Date(ts);
+      return String(d.getHours()).padStart(2, '0') + ':' +
+             String(d.getMinutes()).padStart(2, '0') + ':' +
+             String(d.getSeconds()).padStart(2, '0');
+    }
+
+    function renderHostDashboard() {
+      if (!isSpectator) return;
+      const lbEl = $('hostLeaderboard');
+      const feedEl = $('killFeed');
+      const countEl = $('dashPlayerCount');
+      if (!lbEl || !feedEl) return;
+
+      const lastTagged = computeLastTagged();
+      const playing = Object.entries(players).filter(([id, p]) => !p.isSpectator);
+      countEl.textContent = playing.length + (playing.length === 1 ? ' player' : ' players');
+
+      let ranked = playing.map(([id, p]) => {
+        const kills = p.score || 0;
+        const deaths = p.deaths || 0;
+        const kd = deaths === 0 ? kills : (kills / deaths);
+        const last = lastTagged[id];
+        return { id, name: p.name || '?', kills, deaths, kd, lastVictim: last?.victimName, lastTs: last?.ts };
+      });
+
+      if (dashSortBy === 'kills') {
+        ranked.sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
+      } else {
+        ranked.sort((a, b) => b.kd - a.kd || b.kills - a.kills);
+      }
+
+      const shown = dashTopN > 0 ? ranked.slice(0, dashTopN) : ranked;
+
+      if (shown.length === 0) {
+        lbEl.innerHTML = '<div class="dash-empty">No players yet</div>';
+      } else {
+        lbEl.innerHTML = shown.map((p, i) => {
+          const rankClass = i < 3 ? `rank-${i+1}` : '';
+          const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '#' + (i+1);
+          const kdDisplay = p.deaths === 0 ? (p.kills === 0 ? '0' : '∞') : p.kd.toFixed(2);
+          const lastInfo = p.lastVictim
+            ? `<span class="last-tag">→ ${escapeHtml(p.lastVictim)} · ${fmtTimeAgo(p.lastTs)}</span>`
+            : '';
+          return `<div class="lb-item ${rankClass}">
+            <div class="rank">${medal}</div>
+            <div class="name">${escapeHtml(p.name)}${lastInfo}</div>
+            <div class="stats">
+              <span class="k">⚔${p.kills}</span>
+              <span class="d">💥${p.deaths}</span>
+              <span class="r">K/D ${kdDisplay}</span>
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      const feedArr = Object.entries(hits || {})
+        .map(([k, h]) => ({ ...h, _k: k }))
+        .filter(h => h && h.shooterName && h.victimName)
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+        .slice(0, 30);
+
+      if (feedArr.length === 0) {
+        feedEl.innerHTML = '<div class="dash-empty">No tags yet</div>';
+      } else {
+        feedEl.innerHTML = feedArr.map((h, i) => {
+          const highlight = i < 5 ? ` recent recent-${i+1}` : '';
+          return `<div class="feed-item${highlight}">
+            <div class="feed-text">
+              <span class="shooter">${escapeHtml(h.shooterName)}</span>
+              → tagged →
+              <span class="victim">${escapeHtml(h.victimName)}</span>
+            </div>
+            <div class="feed-time">${fmtClockTime(h.timestamp)}</div>
+          </div>`;
+        }).join('');
+      }
+    }
+
+    document.addEventListener('click', e => {
+      const sortBtn = e.target.closest('#sortSeg button');
+      if (sortBtn) {
+        document.querySelectorAll('#sortSeg button').forEach(b => b.classList.remove('active'));
+        sortBtn.classList.add('active');
+        dashSortBy = sortBtn.dataset.sort;
+        renderHostDashboard();
+        return;
+      }
+      const topBtn = e.target.closest('#topNSeg button');
+      if (topBtn) {
+        document.querySelectorAll('#topNSeg button').forEach(b => b.classList.remove('active'));
+        topBtn.classList.add('active');
+        dashTopN = parseInt(topBtn.dataset.n);
+        renderHostDashboard();
+      }
+    });
 
     async function handleRoomState(r) {
       if (r.state === 'lobby') {
@@ -701,6 +931,9 @@
         $('videoContainer').style.display = 'none';
         $('specContainer').style.display = 'flex';
         $('showQrBtn').style.display = 'none';
+        renderHostDashboard();
+        if (dashRepaintInterval) clearInterval(dashRepaintInterval);
+        dashRepaintInterval = setInterval(renderHostDashboard, 2000);
       } else {
         $('specContainer').style.display = 'none';
         $('videoContainer').style.display = 'block';
@@ -763,6 +996,7 @@
 
     function showEndScreen(r) {
       if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+      if (dashRepaintInterval) { clearInterval(dashRepaintInterval); dashRepaintInterval = null; }
       if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
       $('gameHeader').style.display = 'none';
       $('gameFooter').style.display = 'none';
@@ -831,6 +1065,7 @@
     function cleanupLocal() {
       if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
       if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+      if (dashRepaintInterval) { clearInterval(dashRepaintInterval); dashRepaintInterval = null; }
       roomCode = null; myId = null; roomPassword = null;
     }
     $('lobbyLeaveBtn').addEventListener('click', () => { if (confirm('Leave room?')) leaveRoom(); });
