@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>TagShot — Phase 5A.3 (Tweaks bundle)</title>
+  <title>TagShot — Phase 5A.4 (Fixes)</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; overscroll-behavior: none; }
@@ -428,19 +428,21 @@
     .hp-hud .hp-dead { font-size: 30px; color: #888; }
 
     .cant-shoot-overlay {
-      position: absolute; inset: 0; pointer-events: none;
-      background: rgba(120, 0, 0, 0.35); z-index: 8;
-      display: none; align-items: center; justify-content: center;
-      backdrop-filter: grayscale(0.6);
-      -webkit-backdrop-filter: grayscale(0.6);
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      background: rgba(120, 0, 0, 0.55);
+      z-index: 15;
+      display: none;
+      align-items: center; justify-content: center;
     }
     .cant-shoot-overlay.active { display: flex; }
     .cant-shoot-msg {
-      background: rgba(0,0,0,0.85);
-      padding: 14px 22px; border-radius: 12px;
-      border: 2px solid #ff3b3b;
+      background: rgba(0,0,0,0.9);
+      padding: 16px 24px; border-radius: 14px;
+      border: 3px solid #ff3b3b;
       text-align: center; color: white;
-      max-width: 280px;
+      max-width: 300px;
+      box-shadow: 0 0 40px rgba(255,59,59,0.4);
     }
     .cant-shoot-msg .big { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
     .cant-shoot-msg .small { font-size: 13px; color: #ffaaaa; }
@@ -597,7 +599,7 @@
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="font-size: 56px;">🎯</div>
       <div class="h1">TagShot</div>
-      <div class="sub">Phase 5A.3 · UX & tweaks · v20260420_1126<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
+      <div class="sub">Phase 5A.4 · Bug fixes + team-mode self-heal · v20260420_1238<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
     </div>
 
     <button class="btn primary" id="toCreateBtn">🏠 Create Room</button>
@@ -730,6 +732,10 @@
         <div class="toggle-row" style="border-bottom:none;">
           <div class="tl">Allow eliminated self-heal<br><span class="sub">Dead players can scan Self-Heal QRs to revive.</span></div>
           <label class="switch"><input type="checkbox" id="selfHealToggle"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row" id="teamSelfHealRow" style="display:none;border-bottom:none;">
+          <div class="tl">…also in team mode<br><span class="sub">If off: in team games, only medics can revive (more cooperative).</span></div>
+          <label class="switch"><input type="checkbox" id="teamSelfHealToggle"><span class="slider"></span></label>
         </div>
       </div>
 
@@ -1142,6 +1148,7 @@
         startingHp: 3,
         healScore: 1,
         selfHealAllowed: false,
+        teamModeSelfHealAllowed: false,
         richSound: false,
         createdAt: serverTimestamp()
       });
@@ -1231,6 +1238,14 @@
 
         syncHostSettingsUI(r);
         if (players[myId]) {
+          const wasAlive = myHealth > 0 || (players[myId].alive === true && myHealth === 0);
+          const nowAlive = players[myId].alive !== false;
+          const prevAliveFlag = (typeof window._prevAlive === 'undefined') ? true : window._prevAlive;
+          if (!prevAliveFlag && nowAlive) {
+            lastArsenalScans = {};
+            lastWeaponFire = {};
+          }
+          window._prevAlive = nowAlive;
           myAmmo = players[myId].ammo || 0;
           myHealth = players[myId].health || 0;
           myTeam = players[myId].team != null ? players[myId].team : -1;
@@ -1305,7 +1320,11 @@
           b.classList.toggle('active', parseInt(b.dataset.n) === r.healScore);
         });
       }
-      if (r.selfHealAllowed != null) $('selfHealToggle').checked = r.selfHealAllowed;
+      if (r.selfHealAllowed != null) {
+        $('selfHealToggle').checked = r.selfHealAllowed;
+        $('teamSelfHealRow').style.display = r.selfHealAllowed ? 'flex' : 'none';
+      }
+      if (r.teamModeSelfHealAllowed != null) $('teamSelfHealToggle').checked = r.teamModeSelfHealAllowed;
       if (r.richSound != null) $('richSoundToggle').checked = r.richSound;
       if (r.locEnabled != null) $('locEnableToggle').checked = r.locEnabled;
       if (r.geoFenceEnabled != null) $('geofenceToggle').checked = r.geoFenceEnabled;
@@ -1803,6 +1822,11 @@
     $('selfHealToggle').addEventListener('change', async e => {
       if (!isHost) return;
       await update(ref(db, `rooms/${roomCode}`), { selfHealAllowed: e.target.checked });
+      $('teamSelfHealRow').style.display = e.target.checked ? 'flex' : 'none';
+    });
+    $('teamSelfHealToggle').addEventListener('change', async e => {
+      if (!isHost) return;
+      await update(ref(db, `rooms/${roomCode}`), { teamModeSelfHealAllowed: e.target.checked });
     });
     $('richSoundToggle').addEventListener('change', async e => {
       if (!isHost) return;
@@ -1852,6 +1876,8 @@
       if (!isHost) return;
       const durMin = selectedDuration;
       const endsAt = durMin === 0 ? null : Date.now() + durMin * 60 * 1000;
+      lastArsenalScans = {};
+      lastWeaponFire = {};
       await update(ref(db, `rooms/${roomCode}`), {
         state: 'active',
         startedAt: Date.now(),
@@ -2049,6 +2075,8 @@
 
     $('newRoundBtn').addEventListener('click', async () => {
       if (!isHost) return;
+      lastArsenalScans = {};
+      lastWeaponFire = {};
       const startingAmmo = roomData?.startingAmmo ?? 3;
       const startWeapon = roomData?.startWeapon || 'pistol';
       const healthEnabled = roomData?.healthEnabled === true;
@@ -2206,8 +2234,10 @@
       }
       const meP = players[myId] || {};
       if (roomData?.healthEnabled && meP.alive === false) {
-        if (roomData?.selfHealAllowed) setStatus('Eliminated — find a Self-Heal QR', 'err');
-        else if (roomData?.teamCount > 0) setStatus('Eliminated — wait for a medic', 'err');
+        const teamsOn = roomData?.teamCount > 0;
+        const shCanUse = roomData?.selfHealAllowed && (!teamsOn || roomData?.teamModeSelfHealAllowed);
+        if (shCanUse) setStatus('Eliminated — find a Self-Heal QR', 'err');
+        else if (teamsOn) setStatus('Eliminated — wait for a medic', 'err');
         else setStatus('Eliminated — wait for next round', 'err');
         return;
       }
@@ -2394,14 +2424,10 @@
           setStatus('Self-heal disabled by host', 'err');
           return;
         }
-        const now = Date.now();
-        const lastClaim = lastArsenalScans[arsenalId] || 0;
-        if ((now - lastClaim) < ARSENAL_COOLDOWN_MS) {
-          const wait = Math.ceil((ARSENAL_COOLDOWN_MS - (now - lastClaim)) / 1000);
-          setStatus(`Self-Heal cooldown — ${wait}s`, 'err');
+        if (roomData?.teamCount > 0 && !roomData?.teamModeSelfHealAllowed) {
+          setStatus('In team mode — wait for a medic', 'err');
           return;
         }
-        lastArsenalScans[arsenalId] = now;
         try {
           const sw = roomData?.startWeapon || 'pistol';
           const sa = roomData?.startingAmmo ?? 3;
@@ -2411,10 +2437,11 @@
             [`rooms/${roomCode}/players/${myId}/weapon`]: sw === 'none' ? null : 'pistol',
             [`rooms/${roomCode}/players/${myId}/ammo`]: sw === 'none' ? 0 : sa
           });
+          lastArsenalScans = {};
           setStatus('Revived! Back in the game', 'ok');
           playSound('heal');
           if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 100]);
-        } catch (e) { setStatus('Self-heal failed', 'err'); }
+        } catch (e) { setStatus('Self-heal failed: ' + (e?.message || 'unknown'), 'err'); }
         return;
       }
 
@@ -2835,7 +2862,12 @@
       const p = players[myId];
       if (!p) return null;
       if (roomData.healthEnabled && p.alive === false) {
-        return { big: 'ELIMINATED', small: roomData.selfHealAllowed ? 'Find a Self-Heal QR' : (roomData.teamCount > 0 ? 'Wait for a medic' : 'Wait for next round'), cd: null };
+        const teamsOn = roomData.teamCount > 0;
+        const shCanUse = roomData.selfHealAllowed && (!teamsOn || roomData.teamModeSelfHealAllowed);
+        let small = 'Wait for next round';
+        if (shCanUse) small = 'Find a Self-Heal QR';
+        else if (teamsOn) small = 'Wait for a medic';
+        return { big: 'ELIMINATED', small, cd: null };
       }
       if (!myWeapon) {
         return { big: 'NO WEAPON', small: 'Find an Arsenal QR', cd: null };
