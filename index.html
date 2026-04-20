@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>TagShot — Phase 4 (Map + Location)</title>
+  <title>TagShot — Phase 5A (Teams + Ammo + Aim)</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; overscroll-behavior: none; }
@@ -371,6 +371,111 @@
     }
     #miniMapCanvas { width: 100%; height: 100%; display: block; }
 
+    .reticle.size-easy { width: 280px; height: 280px; }
+    .reticle.size-normal { width: 220px; height: 220px; }
+    .reticle.size-hard { width: 160px; height: 160px; }
+
+    .qr-marker {
+      position: absolute; border: 3px solid #fbbf24;
+      border-radius: 4px; pointer-events: none; opacity: 0;
+      transition: opacity .15s; z-index: 4;
+    }
+    .qr-marker.active { opacity: 1; }
+    .qr-marker.in-reticle { border-color: #4ade80; }
+
+    .aim-hint {
+      position: absolute; top: 70px; left: 50%;
+      transform: translateX(-50%); font-size: 12px;
+      color: #fbbf24; background: rgba(0,0,0,0.7);
+      padding: 6px 12px; border-radius: 6px;
+      pointer-events: none; opacity: 0; transition: opacity .15s; z-index: 6;
+    }
+    .aim-hint.active { opacity: 1; }
+
+    .ammo-hud {
+      position: absolute; bottom: 14px; left: 14px;
+      background: rgba(0,0,0,0.75); padding: 8px 14px;
+      border-radius: 10px; z-index: 7;
+      display: flex; align-items: center; gap: 10px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .ammo-hud .ammo-icon { font-size: 20px; }
+    .ammo-hud .ammo-count { font-size: 22px; font-weight: 700; font-family: ui-monospace, monospace; color: #fbbf24; }
+    .ammo-hud .ammo-count.low { color: #ff3b3b; animation: ammoPulse 0.8s infinite; }
+    .ammo-hud .ammo-count.zero { color: #ff3b3b; }
+    @keyframes ammoPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    .health-hud {
+      position: absolute; bottom: 14px; right: 14px;
+      background: rgba(0,0,0,0.75); padding: 8px 14px;
+      border-radius: 10px; z-index: 7;
+      display: flex; align-items: center; gap: 10px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .health-hud .hp-icon { font-size: 18px; }
+    .health-hud .hp-count { font-size: 18px; font-weight: 700; color: #ff3b3b; }
+
+    .sound-toggle {
+      position: absolute; top: 14px; right: 14px;
+      background: rgba(0,0,0,0.65); width: 40px; height: 40px;
+      border-radius: 50%; border: 1px solid rgba(255,255,255,0.1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; color: white; z-index: 7;
+    }
+
+    .team-badge {
+      display: inline-block; font-size: 10px; padding: 2px 7px;
+      border-radius: 4px; margin-left: 6px; font-weight: 600;
+    }
+    .team-0 { background: #ef4444; color: white; }
+    .team-1 { background: #3b82f6; color: white; }
+    .team-2 { background: #10b981; color: white; }
+    .team-3 { background: #f59e0b; color: white; }
+    .team-4 { background: #a855f7; color: white; }
+    .team-5 { background: #ec4899; color: white; }
+    .team-6 { background: #14b8a6; color: white; }
+    .team-7 { background: #f97316; color: white; }
+    .team-8 { background: #06b6d4; color: white; }
+    .team-9 { background: #84cc16; color: white; }
+
+    .player-row .team-picker {
+      display: flex; gap: 3px; flex-wrap: wrap; margin-top: 4px;
+    }
+    .team-pick-btn {
+      width: 24px; height: 24px; border-radius: 4px;
+      border: 1.5px solid rgba(255,255,255,0.3);
+      background: transparent; font-size: 10px; font-weight: 600;
+      color: white; display: flex; align-items: center; justify-content: center;
+    }
+    .team-pick-btn.active { border-color: white; }
+
+    .team-lb-section { margin-bottom: 12px; }
+    .team-lb-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border-radius: 10px; margin-bottom: 6px;
+      font-size: 14px; border: 1px solid rgba(255,255,255,0.08);
+    }
+    .team-lb-row .team-swatch { width: 20px; height: 20px; border-radius: 4px; flex-shrink: 0; }
+    .team-lb-row .team-name { flex: 1; font-weight: 600; }
+    .team-lb-row .team-score { font-family: ui-monospace, monospace; font-size: 16px; font-weight: 700; }
+
+    .weapon-select {
+      position: absolute; top: 70px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.85); padding: 12px 16px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.1); z-index: 8;
+      display: none; flex-direction: column; align-items: center;
+      font-size: 13px; color: white; max-width: 280px; text-align: center;
+    }
+    .weapon-select.active { display: flex; }
+    .weapon-select .msg { margin-bottom: 8px; }
+
+    .btn.orange { background: #c2410c; border-color: #c2410c; }
+
+    @media print {
+      body { background: white; color: black; }
+      .no-print { display: none !important; }
+    }
+
     .conn-pill {
       display: inline-block; padding: 3px 8px; border-radius: 12px;
       font-size: 11px; margin-left: 8px;
@@ -387,7 +492,7 @@
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="font-size: 56px;">🎯</div>
       <div class="h1">TagShot</div>
-      <div class="sub">Phase 4 · Map + location · v20260419_2254<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
+      <div class="sub">Phase 5A · Teams + Ammo + Aim · v20260420_0937<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
     </div>
 
     <button class="btn primary" id="toCreateBtn">🏠 Create Room</button>
@@ -435,6 +540,59 @@
 
     <div class="card" id="hostSettingsCard" style="display:none;">
       <div class="h2" style="margin-top:0;">Host settings</div>
+
+      <div style="margin-top:12px;">
+        <label class="label">Reticle size (aim difficulty)</label>
+        <div class="seg" id="reticleSeg">
+          <button data-size="easy">Easy (big)</button>
+          <button data-size="normal" class="active">Normal</button>
+          <button data-size="hard">Hard (small)</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <label class="label">Number of teams</label>
+        <div class="seg" id="teamCountSeg" style="flex-wrap:wrap;">
+          <button data-n="0" class="active">None</button>
+          <button data-n="2">2</button>
+          <button data-n="3">3</button>
+          <button data-n="4">4</button>
+          <button data-n="5">5</button>
+          <button data-n="6">6</button>
+          <button data-n="7">7</button>
+          <button data-n="8">8</button>
+          <button data-n="9">9</button>
+          <button data-n="10">10</button>
+        </div>
+      </div>
+
+      <div id="teamModeRow" style="margin-top:10px;display:none;">
+        <label class="label">Team assignment</label>
+        <div class="seg" id="teamModeSeg">
+          <button data-mode="auto" class="active">Auto-assign</button>
+          <button data-mode="manual">Manual</button>
+        </div>
+        <button class="btn" id="rerollTeamsBtn" style="margin-top:8px;font-size:13px;padding:10px;">🎲 Re-roll auto teams</button>
+      </div>
+
+      <div style="margin-top:12px;">
+        <label class="label">Starting ammo <span id="startAmmoVal" style="color:#fbbf24;font-family:monospace;">3</span></label>
+        <input type="range" id="startAmmoRange" min="0" max="20" step="1" value="3" style="width:100%;">
+        <div style="font-size:11px;color:#666;margin-top:4px;">Players must scan Arsenal QRs to reload.</div>
+      </div>
+
+      <div class="toggle-row">
+        <div class="tl">Health / elimination<br><span class="sub">Players have 1 HP, eliminated after tag.</span></div>
+        <label class="switch"><input type="checkbox" id="healthToggle"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="tl">Rich sound pack<br><span class="sub">Better effects (optional, more data).</span></div>
+        <label class="switch"><input type="checkbox" id="richSoundToggle"><span class="slider"></span></label>
+      </div>
+
+      <div style="margin-top:12px;">
+        <button class="btn orange" id="arsenalPrintBtn">🖨️ Print Arsenal QR sheet</button>
+      </div>
 
       <div class="toggle-row">
         <div class="tl">Host plays<br><span class="sub">If off, host only moderates.</span></div>
@@ -503,12 +661,23 @@
   <div class="video-container" id="videoContainer" style="display:none;">
     <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
-    <div class="reticle">
+    <div class="reticle size-normal" id="reticle">
       <div class="reticle-corner tl"></div><div class="reticle-corner tr"></div>
       <div class="reticle-corner bl"></div><div class="reticle-corner br"></div>
     </div>
+    <div class="qr-marker" id="qrMarker"></div>
+    <div class="aim-hint" id="aimHint">Move QR into reticle</div>
     <div class="flash" id="flash"></div>
     <div class="hit-toast" id="hitToast"></div>
+    <button class="sound-toggle" id="soundToggle">🔊</button>
+    <div class="ammo-hud" id="ammoHud" style="display:none;">
+      <span class="ammo-icon">🔫</span>
+      <span class="ammo-count" id="ammoCount">0</span>
+    </div>
+    <div class="health-hud" id="healthHud" style="display:none;">
+      <span class="hp-icon">❤️</span>
+      <span class="hp-count" id="hpCount">1</span>
+    </div>
   </div>
 
   <div class="video-container spec" id="specContainer" style="display:none;">
@@ -530,6 +699,11 @@
           <button data-n="10">Top 10</button>
           <button data-n="0" class="active">All</button>
         </div>
+      </div>
+
+      <div class="dash-panel" id="teamLbPanel" style="display:none;">
+        <div class="panel-title">Team Scores</div>
+        <div id="teamLeaderboard" class="team-lb-section"></div>
       </div>
 
       <div class="dash-panel">
@@ -625,7 +799,11 @@
 
     const HIT_COOLDOWN_MS = 3000;
     const QR_PREFIX = "TAGSHOT::";
+    const AMMO_QR_PREFIX = "TAGSHOT_AMMO::";
+    const ARSENAL_COOLDOWN_MS = 60000;
     const BASE_URL = location.origin + location.pathname;
+    const TEAM_COLORS = ['#ef4444','#3b82f6','#10b981','#f59e0b','#a855f7','#ec4899','#14b8a6','#f97316','#06b6d4','#84cc16'];
+    const TEAM_NAMES = ['Red','Blue','Green','Amber','Purple','Pink','Teal','Orange','Cyan','Lime'];
 
     let roomCode = null;
     let roomPassword = null;
@@ -652,6 +830,14 @@
     let geoFenceCenter = null;
     let geoFenceRadius = 100;
     let mapDrawTimer = null;
+    let myAmmo = 0;
+    let myHealth = 1;
+    let myTeam = -1;
+    let lastArsenalScans = {};
+    let soundEnabled = true;
+    let audioCtx = null;
+    let qrMarkerLastSeen = 0;
+    let hitEffectsTimer = null;
 
     const $ = id => document.getElementById(id);
     const showScreen = id => {
@@ -751,10 +937,18 @@
         locEnabled: false,
         geoFenceEnabled: false,
         locUpdateSec: 5,
+        reticleSize: 'normal',
+        teamCount: 0,
+        teamMode: 'auto',
+        startingAmmo: 3,
+        healthEnabled: false,
+        richSound: false,
         createdAt: serverTimestamp()
       });
       await set(ref(db, `rooms/${code}/players/${myId}`), {
-        name: myName, score: 0, deaths: 0, isHost: true, isSpectator: false, joinedAt: serverTimestamp()
+        name: myName, score: 0, deaths: 0, isHost: true, isSpectator: false,
+        team: -1, ammo: 0, health: 1, alive: true,
+        joinedAt: serverTimestamp()
       });
       onDisconnect(ref(db, `rooms/${code}/players/${myId}`)).remove();
 
@@ -782,7 +976,9 @@
       isSpectator = false;
 
       await set(ref(db, `rooms/${code}/players/${myId}`), {
-        name: myName, score: 0, deaths: 0, isHost: false, isSpectator: false, joinedAt: serverTimestamp()
+        name: myName, score: 0, deaths: 0, isHost: false, isSpectator: false,
+        team: -1, ammo: 0, health: 1, alive: true,
+        joinedAt: serverTimestamp()
       });
       onDisconnect(ref(db, `rooms/${code}/players/${myId}`)).remove();
 
@@ -829,9 +1025,17 @@
           }).catch(() => {});
         }
 
+        syncHostSettingsUI(r);
+        if (players[myId]) {
+          myAmmo = players[myId].ammo || 0;
+          myHealth = players[myId].health || 0;
+          myTeam = players[myId].team != null ? players[myId].team : -1;
+        }
+
         renderPlayerList();
         renderScoreboard();
         renderHostDashboard();
+        updateHud();
         drawAllMaps();
         handleRoomState(r);
       });
@@ -843,6 +1047,7 @@
           const hit = hits[key];
           if (hit.victimId === myId && !(hit.seenBy && hit.seenBy[myId])) {
             showVictimFlash(hit.shooterName || 'Someone');
+            playSound('victim');
             update(ref(db, `rooms/${roomCode}/hits/${key}/seenBy`), { [myId]: true });
           }
         }
@@ -850,18 +1055,94 @@
       });
     }
 
+    function syncHostSettingsUI(r) {
+      if (!isHost) return;
+      if (r.reticleSize) {
+        document.querySelectorAll('#reticleSeg button').forEach(b => {
+          b.classList.toggle('active', b.dataset.size === r.reticleSize);
+        });
+      }
+      if (r.teamCount != null) {
+        document.querySelectorAll('#teamCountSeg button').forEach(b => {
+          b.classList.toggle('active', parseInt(b.dataset.n) === r.teamCount);
+        });
+        $('teamModeRow').style.display = r.teamCount > 0 ? 'block' : 'none';
+      }
+      if (r.teamMode) {
+        document.querySelectorAll('#teamModeSeg button').forEach(b => {
+          b.classList.toggle('active', b.dataset.mode === r.teamMode);
+        });
+      }
+      if (r.startingAmmo != null) {
+        $('startAmmoRange').value = r.startingAmmo;
+        $('startAmmoVal').textContent = r.startingAmmo;
+      }
+      if (r.healthEnabled != null) $('healthToggle').checked = r.healthEnabled;
+      if (r.richSound != null) $('richSoundToggle').checked = r.richSound;
+      if (r.locEnabled != null) $('locEnableToggle').checked = r.locEnabled;
+      if (r.geoFenceEnabled != null) $('geofenceToggle').checked = r.geoFenceEnabled;
+      if (r.hostPlays != null) $('hostPlaysToggle').checked = r.hostPlays;
+      if (r.allowLateJoin != null) $('lateJoinToggle').checked = r.allowLateJoin;
+      if (r.locUpdateSec != null) {
+        document.querySelectorAll('#locRateSeg button').forEach(b => {
+          b.classList.toggle('active', parseInt(b.dataset.sec) === r.locUpdateSec);
+        });
+      }
+    }
+
     function renderPlayerList() {
       const list = $('playerList');
       const entries = Object.entries(players);
       $('playerCount').textContent = `(${entries.length})`;
       if (entries.length === 0) { list.innerHTML = '<div style="color:#666;font-size:13px;padding:8px 0;">No players yet</div>'; return; }
+      const tc = roomData?.teamCount || 0;
+      const showPicker = isHost && tc > 0 && roomData?.teamMode === 'manual';
       list.innerHTML = entries.map(([id, p]) => {
         const badges = [];
-        if (p.isHost) badges.push('<span class="badge host">HOST</span>');
-        if (p.isSpectator) badges.push('<span class="badge spec">SPEC</span>');
+        if (p.isHost) badges.push('<span class="team-badge" style="background:#ff3b3b;color:white;">HOST</span>');
+        if (p.isSpectator) badges.push('<span class="team-badge" style="background:#555;color:white;">SPEC</span>');
+        if (!p.isSpectator && tc > 0 && p.team >= 0 && p.team < tc) {
+          badges.push(`<span class="team-badge team-${p.team}">${TEAM_NAMES[p.team]}</span>`);
+        }
         const me = id === myId ? ' <span style="color:#4ade80;font-size:11px;">(you)</span>' : '';
-        return `<div class="player-row"><div>${escapeHtml(p.name || '?')}${me}${badges.join('')}</div></div>`;
+        let picker = '';
+        if (showPicker && !p.isSpectator) {
+          const buttons = [];
+          for (let i = 0; i < tc; i++) {
+            buttons.push(`<button class="team-pick-btn ${p.team === i ? 'active' : ''}" style="background:${TEAM_COLORS[i]};" onclick="assignTeam('${id}', ${i})">${i+1}</button>`);
+          }
+          picker = `<div class="team-picker">${buttons.join('')}</div>`;
+        }
+        return `<div class="player-row"><div style="flex:1;"><div>${escapeHtml(p.name || '?')}${me}${badges.join('')}</div>${picker}</div></div>`;
       }).join('');
+    }
+
+    window.assignTeam = async (playerId, teamIdx) => {
+      if (!isHost) return;
+      await update(ref(db, `rooms/${roomCode}/players/${playerId}`), { team: teamIdx });
+    };
+
+    async function autoAssignTeams(n) {
+      if (!isHost) return;
+      const ids = Object.entries(players).filter(([id, p]) => !p.isSpectator).map(([id]) => id);
+      for (let i = ids.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [ids[i], ids[j]] = [ids[j], ids[i]];
+      }
+      const updates = {};
+      ids.forEach((id, idx) => {
+        updates[`rooms/${roomCode}/players/${id}/team`] = idx % n;
+      });
+      if (Object.keys(updates).length > 0) await update(ref(db), updates);
+    }
+
+    async function clearAllTeams() {
+      if (!isHost) return;
+      const updates = {};
+      for (const id of Object.keys(players)) {
+        updates[`rooms/${roomCode}/players/${id}/team`] = -1;
+      }
+      if (Object.keys(updates).length > 0) await update(ref(db), updates);
     }
 
     function renderScoreboard() {
@@ -873,7 +1154,10 @@
       if (entries.length === 0) { sb.innerHTML = '<div class="score-chip">Waiting…</div>'; return; }
       sb.innerHTML = entries.map(([id, p]) => {
         const isMe = id === myId;
-        return `<div class="score-chip ${isMe ? 'me' : ''}">${escapeHtml(p.name || '?')} <span class="pts">${p.score || 0}</span></div>`;
+        const teamColor = (roomData?.teamCount > 0 && p.team >= 0) ? TEAM_COLORS[p.team] : null;
+        const borderStyle = teamColor ? `border-left:3px solid ${teamColor};padding-left:7px;` : '';
+        const dead = roomData?.healthEnabled && p.alive === false ? ' 💀' : '';
+        return `<div class="score-chip ${isMe ? 'me' : ''}" style="${borderStyle}">${escapeHtml(p.name || '?')}${dead} <span class="pts">${p.score || 0}</span></div>`;
       }).join('');
     }
 
@@ -914,6 +1198,8 @@
       const countEl = $('dashPlayerCount');
       if (!lbEl || !feedEl) return;
 
+      renderTeamLeaderboard();
+
       const lastTagged = computeLastTagged();
       const playing = Object.entries(players).filter(([id, p]) => !p.isSpectator);
       countEl.textContent = playing.length + (playing.length === 1 ? ' player' : ' players');
@@ -944,13 +1230,19 @@
           const lastInfo = p.lastVictim
             ? `<span class="last-tag">→ ${escapeHtml(p.lastVictim)} · ${fmtTimeAgo(p.lastTs)}</span>`
             : '';
+          const pFull = players[p.id] || {};
+          const teamBadge = (roomData?.teamCount > 0 && pFull.team >= 0)
+            ? `<span class="team-badge team-${pFull.team}">${TEAM_NAMES[pFull.team]}</span>`
+            : '';
+          const eliminated = roomData?.healthEnabled && pFull.alive === false ? ' <span style="color:#666;font-size:11px;">💀 out</span>' : '';
+          const ammoInfo = `<span style="color:#fbbf24;font-size:11px;">🔫${pFull.ammo || 0}</span>`;
           return `<div class="lb-item ${rankClass}">
             <div class="rank">${medal}</div>
-            <div class="name">${escapeHtml(p.name)}${lastInfo}</div>
+            <div class="name">${escapeHtml(p.name)}${teamBadge}${eliminated}${lastInfo}</div>
             <div class="stats">
               <span class="k">⚔${p.kills}</span>
               <span class="d">💥${p.deaths}</span>
-              <span class="r">K/D ${kdDisplay}</span>
+              ${ammoInfo}
             </div>
           </div>`;
         }).join('');
@@ -1060,6 +1352,55 @@
         await update(ref(db, `rooms/${roomCode}`), { locUpdateSec: parseInt(b.dataset.sec) });
       });
     });
+    document.querySelectorAll('#reticleSeg button').forEach(b => {
+      b.addEventListener('click', async () => {
+        if (!isHost) return;
+        document.querySelectorAll('#reticleSeg button').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        await update(ref(db, `rooms/${roomCode}`), { reticleSize: b.dataset.size });
+      });
+    });
+    document.querySelectorAll('#teamCountSeg button').forEach(b => {
+      b.addEventListener('click', async () => {
+        if (!isHost) return;
+        document.querySelectorAll('#teamCountSeg button').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        const n = parseInt(b.dataset.n);
+        await update(ref(db, `rooms/${roomCode}`), { teamCount: n });
+        $('teamModeRow').style.display = n > 0 ? 'block' : 'none';
+        if (n > 0 && roomData?.teamMode === 'auto') autoAssignTeams(n);
+        if (n === 0) clearAllTeams();
+      });
+    });
+    document.querySelectorAll('#teamModeSeg button').forEach(b => {
+      b.addEventListener('click', async () => {
+        if (!isHost) return;
+        document.querySelectorAll('#teamModeSeg button').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        await update(ref(db, `rooms/${roomCode}`), { teamMode: b.dataset.mode });
+        if (b.dataset.mode === 'auto' && roomData?.teamCount > 0) autoAssignTeams(roomData.teamCount);
+      });
+    });
+    $('rerollTeamsBtn').addEventListener('click', () => {
+      if (!isHost || !roomData?.teamCount) return;
+      autoAssignTeams(roomData.teamCount);
+    });
+    $('startAmmoRange').addEventListener('input', e => {
+      $('startAmmoVal').textContent = e.target.value;
+    });
+    $('startAmmoRange').addEventListener('change', async e => {
+      if (!isHost) return;
+      await update(ref(db, `rooms/${roomCode}`), { startingAmmo: parseInt(e.target.value) });
+    });
+    $('healthToggle').addEventListener('change', async e => {
+      if (!isHost) return;
+      await update(ref(db, `rooms/${roomCode}`), { healthEnabled: e.target.checked });
+    });
+    $('richSoundToggle').addEventListener('change', async e => {
+      if (!isHost) return;
+      await update(ref(db, `rooms/${roomCode}`), { richSound: e.target.checked });
+    });
+    $('arsenalPrintBtn').addEventListener('click', () => { if (roomCode) openArsenalSheet(); });
 
     $('startGameBtn').addEventListener('click', async () => {
       if (!isHost) return;
@@ -1071,12 +1412,18 @@
         endsAt: endsAt,
         durationMin: durMin
       });
+      const startingAmmo = roomData?.startingAmmo ?? 3;
+      const healthEnabled = roomData?.healthEnabled === true;
       const resetUpdates = {};
       for (const id of Object.keys(players)) {
         resetUpdates[`rooms/${roomCode}/players/${id}/score`] = 0;
         resetUpdates[`rooms/${roomCode}/players/${id}/deaths`] = 0;
+        resetUpdates[`rooms/${roomCode}/players/${id}/ammo`] = startingAmmo;
+        resetUpdates[`rooms/${roomCode}/players/${id}/health`] = healthEnabled ? 1 : 1;
+        resetUpdates[`rooms/${roomCode}/players/${id}/alive`] = true;
       }
       resetUpdates[`rooms/${roomCode}/hits`] = null;
+      resetUpdates[`rooms/${roomCode}/arsenalClaims`] = null;
       await update(ref(db), resetUpdates);
     });
 
@@ -1084,13 +1431,20 @@
       isSpectator = isHost && !r.hostPlays;
       $('gameHeader').style.display = 'block';
       $('gameFooter').style.display = 'block';
-      $('youLabel').textContent = myName + (isHost ? ' (host)' : '');
+      $('youLabel').textContent = myName + (isHost ? ' (host)' : '') + (myTeam >= 0 && r.teamCount > 0 ? ` [${TEAM_NAMES[myTeam]}]` : '');
       $('gameRc').textContent = '· ' + roomCode;
+
+      const reticle = $('reticle');
+      if (reticle && r.reticleSize) {
+        reticle.className = 'reticle size-' + r.reticleSize;
+      }
 
       if (isSpectator) {
         $('videoContainer').style.display = 'none';
         $('specContainer').style.display = 'flex';
         $('showQrBtn').style.display = 'none';
+        $('ammoHud').style.display = 'none';
+        $('healthHud').style.display = 'none';
         renderHostDashboard();
         if (dashRepaintInterval) clearInterval(dashRepaintInterval);
         dashRepaintInterval = setInterval(renderHostDashboard, 2000);
@@ -1098,6 +1452,8 @@
         $('specContainer').style.display = 'none';
         $('videoContainer').style.display = 'block';
         $('showQrBtn').style.display = 'block';
+        $('ammoHud').style.display = 'flex';
+        $('healthHud').style.display = r.healthEnabled ? 'flex' : 'none';
         if (!mediaStream) {
           try {
             mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -1118,6 +1474,7 @@
 
       showScreen(null);
       setStatus(isSpectator ? 'Moderating…' : 'Scanning…', 'ok');
+      updateHud();
     }
 
     function updateTimer(r) {
@@ -1130,6 +1487,10 @@
         const s = Math.floor((remaining % 60000) / 1000);
         chip.textContent = m + ':' + String(s).padStart(2, '0');
         chip.className = remaining < 60000 ? 'timer-chip warn' : 'timer-chip';
+        if (remaining <= 10000 && remaining > 0 && !isSpectator) {
+          const justCrossed = Math.floor(remaining / 1000) !== Math.floor((remaining + 1000) / 1000);
+          if (s <= 10 && justCrossed) playSound('tick');
+        }
         if (remaining <= 0) {
           clearInterval(timerInterval);
           if (isHost) {
@@ -1158,6 +1519,7 @@
       if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
       if (dashRepaintInterval) { clearInterval(dashRepaintInterval); dashRepaintInterval = null; }
       if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+      playSound('end');
       $('gameHeader').style.display = 'none';
       $('gameFooter').style.display = 'none';
       $('videoContainer').style.display = 'none';
@@ -1177,20 +1539,44 @@
         .sort((a, b) => b.score - a.score || a.deaths - b.deaths);
 
       const list = $('leaderboardList');
-      list.innerHTML = entries.map((p, i) => {
+      let teamHtml = '';
+      if (r.teamCount > 0) {
+        const teamScores = [];
+        for (let t = 0; t < r.teamCount; t++) {
+          const members = Object.values(r.players || {}).filter(p => !p.isSpectator && p.team === t);
+          const score = members.reduce((s, p) => s + (p.score || 0), 0);
+          teamScores.push({ idx: t, name: TEAM_NAMES[t], color: TEAM_COLORS[t], score, count: members.length });
+        }
+        teamScores.sort((a, b) => b.score - a.score);
+        teamHtml = `<div style="margin-bottom:14px;">
+          <div style="font-size:14px;font-weight:600;color:#ccc;margin-bottom:6px;">🏆 Team Standings</div>
+          ${teamScores.map((t, i) => `
+            <div class="team-lb-row" style="${i === 0 ? 'border:2px solid ' + t.color + ';' : ''}">
+              <div class="team-swatch" style="background:${t.color}"></div>
+              <div class="team-name">${i === 0 ? '🥇 ' : ''}${t.name} <span style="color:#888;font-size:11px;font-weight:400;">(${t.count})</span></div>
+              <div class="team-score" style="color:${t.color};">${t.score}</div>
+            </div>
+          `).join('')}
+        </div>`;
+      }
+      list.innerHTML = teamHtml + (entries.map((p, i) => {
         const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
         const meClass = p.id === myId ? 'me' : '';
         const rankText = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '#' + (i+1);
+        const pFull = (r.players || {})[p.id] || {};
+        const teamBadge = (r.teamCount > 0 && pFull.team >= 0)
+          ? `<span class="team-badge team-${pFull.team}">${TEAM_NAMES[pFull.team]}</span>`
+          : '';
         return `<div class="lb-row ${rankClass} ${meClass}">
           <div class="lb-rank">${rankText}</div>
-          <div class="lb-name">${escapeHtml(p.name)}</div>
+          <div class="lb-name">${escapeHtml(p.name)}${teamBadge}</div>
           <div class="lb-stats">
             <span class="kd">⚔ ${p.score}</span>
             <span class="dd">💥 ${p.deaths}</span>
             <span>K/D ${p.kd}</span>
           </div>
         </div>`;
-      }).join('') || '<div style="color:#888;text-align:center;padding:20px;">No players</div>';
+      }).join('') || '<div style="color:#888;text-align:center;padding:20px;">No players</div>');
 
       $('hostEndButtons').style.display = isHost ? 'block' : 'none';
       showScreen('endScreen');
@@ -1198,12 +1584,17 @@
 
     $('newRoundBtn').addEventListener('click', async () => {
       if (!isHost) return;
+      const startingAmmo = roomData?.startingAmmo ?? 3;
       const resetUpdates = {};
       for (const id of Object.keys(players)) {
         resetUpdates[`rooms/${roomCode}/players/${id}/score`] = 0;
         resetUpdates[`rooms/${roomCode}/players/${id}/deaths`] = 0;
+        resetUpdates[`rooms/${roomCode}/players/${id}/ammo`] = startingAmmo;
+        resetUpdates[`rooms/${roomCode}/players/${id}/health`] = 1;
+        resetUpdates[`rooms/${roomCode}/players/${id}/alive`] = true;
       }
       resetUpdates[`rooms/${roomCode}/hits`] = null;
+      resetUpdates[`rooms/${roomCode}/arsenalClaims`] = null;
       resetUpdates[`rooms/${roomCode}/state`] = 'lobby';
       resetUpdates[`rooms/${roomCode}/startedAt`] = null;
       resetUpdates[`rooms/${roomCode}/endsAt`] = null;
@@ -1237,6 +1628,48 @@
     const canvas = $('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
+    function isQrCenterInReticle(code) {
+      const reticle = $('reticle');
+      if (!reticle || !video) return true;
+      const vRect = video.getBoundingClientRect();
+      const rRect = reticle.getBoundingClientRect();
+      const scaleX = vRect.width / (video.videoWidth || 1);
+      const scaleY = vRect.height / (video.videoHeight || 1);
+      const cxVid = (code.location.topLeftCorner.x + code.location.topRightCorner.x + code.location.bottomRightCorner.x + code.location.bottomLeftCorner.x) / 4;
+      const cyVid = (code.location.topLeftCorner.y + code.location.topRightCorner.y + code.location.bottomRightCorner.y + code.location.bottomLeftCorner.y) / 4;
+      const cxScreen = vRect.left + cxVid * scaleX;
+      const cyScreen = vRect.top + cyVid * scaleY;
+      return (cxScreen >= rRect.left && cxScreen <= rRect.right &&
+              cyScreen >= rRect.top && cyScreen <= rRect.bottom);
+    }
+
+    function showQrMarker(code, inReticle) {
+      const marker = $('qrMarker');
+      if (!marker || !video) return;
+      const vRect = video.getBoundingClientRect();
+      const scaleX = vRect.width / (video.videoWidth || 1);
+      const scaleY = vRect.height / (video.videoHeight || 1);
+      const xs = [code.location.topLeftCorner.x, code.location.topRightCorner.x, code.location.bottomRightCorner.x, code.location.bottomLeftCorner.x];
+      const ys = [code.location.topLeftCorner.y, code.location.topRightCorner.y, code.location.bottomRightCorner.y, code.location.bottomLeftCorner.y];
+      const minX = Math.min(...xs) * scaleX;
+      const minY = Math.min(...ys) * scaleY;
+      const maxX = Math.max(...xs) * scaleX;
+      const maxY = Math.max(...ys) * scaleY;
+      marker.style.left = minX + 'px';
+      marker.style.top = minY + 'px';
+      marker.style.width = (maxX - minX) + 'px';
+      marker.style.height = (maxY - minY) + 'px';
+      marker.classList.add('active');
+      marker.classList.toggle('in-reticle', inReticle);
+      qrMarkerLastSeen = Date.now();
+    }
+    function hideQrMarker() {
+      if (Date.now() - qrMarkerLastSeen > 300) {
+        $('qrMarker')?.classList.remove('active');
+        $('aimHint')?.classList.remove('active');
+      }
+    }
+
     function scanLoop() {
       if (isSpectator || !mediaStream) return;
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
@@ -1246,7 +1679,19 @@
         try {
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
-          if (code && code.data) handleScan(code.data);
+          if (code && code.data && code.location) {
+            const inReticle = isQrCenterInReticle(code);
+            showQrMarker(code, inReticle);
+            if (inReticle) {
+              $('aimHint').classList.remove('active');
+              handleScan(code.data);
+            } else {
+              $('aimHint').textContent = 'Move QR into reticle';
+              $('aimHint').classList.add('active');
+            }
+          } else {
+            hideQrMarker();
+          }
         } catch (e) {}
       }
       requestAnimationFrame(scanLoop);
@@ -1256,6 +1701,11 @@
       const now = Date.now();
       if (raw === lastScanRaw && (now - lastScanTime) < 500) return;
       lastScanRaw = raw; lastScanTime = now;
+
+      if (raw.startsWith(AMMO_QR_PREFIX)) {
+        handleAmmoScan(raw);
+        return;
+      }
 
       if (!raw.startsWith(QR_PREFIX)) {
         setStatus('Not a TagShot QR', 'err');
@@ -1280,6 +1730,16 @@
         setStatus('Game not active', 'err');
         return;
       }
+      if (roomData?.healthEnabled && players[myId] && players[myId].alive === false) {
+        setStatus('You are eliminated!', 'err');
+        return;
+      }
+      if (myAmmo <= 0) {
+        setStatus('Out of ammo! Scan an Arsenal QR', 'err');
+        playSound('empty');
+        setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
+        return;
+      }
       if (roomData?.geoFenceEnabled && geoFenceCenter && myCoords) {
         const dist = haversine(myCoords, geoFenceCenter);
         if (dist !== null && dist > geoFenceRadius) {
@@ -1289,6 +1749,16 @@
       }
       if (!players[targetId] || players[targetId].isSpectator) {
         setStatus('Player not in game', 'err');
+        setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
+        return;
+      }
+      if (roomData?.teamCount > 0 && players[targetId].team === myTeam && myTeam >= 0) {
+        setStatus(`${players[targetId].name} is on your team!`, 'err');
+        setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
+        return;
+      }
+      if (roomData?.healthEnabled && players[targetId].alive === false) {
+        setStatus(`${players[targetId].name} is already eliminated`, 'err');
         setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
         return;
       }
@@ -1302,15 +1772,83 @@
       scoreHit(targetId);
     }
 
+    async function handleAmmoScan(raw) {
+      const parts = raw.slice(AMMO_QR_PREFIX.length).split(':');
+      if (parts.length < 3) { setStatus('Invalid Arsenal QR', 'err'); return; }
+      const targetRoom = parts[0];
+      const arsenalId = parts[1];
+      const amount = parseInt(parts[2]);
+      if (targetRoom !== roomCode) {
+        setStatus('Arsenal is for a different room', 'err');
+        return;
+      }
+      if (!amount || amount < 1) {
+        setStatus('Invalid ammo amount', 'err');
+        return;
+      }
+      if (roomData?.state !== 'active') {
+        setStatus('Game not active', 'err');
+        return;
+      }
+      const now = Date.now();
+      const lastClaim = lastArsenalScans[arsenalId] || 0;
+      if ((now - lastClaim) < ARSENAL_COOLDOWN_MS) {
+        const wait = Math.ceil((ARSENAL_COOLDOWN_MS - (now - lastClaim)) / 1000);
+        setStatus(`Arsenal cooldown — ${wait}s`, 'err');
+        return;
+      }
+      lastArsenalScans[arsenalId] = now;
+
+      try {
+        const snap = await get(ref(db, `rooms/${roomCode}/players/${myId}/ammo`));
+        const newAmmo = (snap.val() || 0) + amount;
+        await set(ref(db, `rooms/${roomCode}/players/${myId}/ammo`), newAmmo);
+        myAmmo = newAmmo;
+        updateHud();
+        setStatus(`+${amount} ammo! Total: ${newAmmo}`, 'ok');
+        playSound('reload');
+        if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
+        const toast = $('hitToast');
+        toast.textContent = `🔋 +${amount} ammo (total ${newAmmo})`;
+        toast.className = 'hit-toast active';
+        toast.style.borderColor = '#fbbf24';
+        setTimeout(() => {
+          toast.className = 'hit-toast';
+          toast.style.borderColor = '';
+        }, 1500);
+      } catch (err) {
+        setStatus('Ammo pickup failed', 'err');
+      }
+    }
+
     async function scoreHit(targetId) {
       const victimName = players[targetId]?.name || 'Player';
       try {
-        const mySnap = await get(ref(db, `rooms/${roomCode}/players/${myId}/score`));
-        const vSnap = await get(ref(db, `rooms/${roomCode}/players/${targetId}/deaths`));
-        await update(ref(db), {
-          [`rooms/${roomCode}/players/${myId}/score`]: (mySnap.val() || 0) + 1,
-          [`rooms/${roomCode}/players/${targetId}/deaths`]: (vSnap.val() || 0) + 1
-        });
+        const mySnap = await get(ref(db, `rooms/${roomCode}/players/${myId}`));
+        const vSnap = await get(ref(db, `rooms/${roomCode}/players/${targetId}`));
+        const meP = mySnap.val() || {};
+        const victP = vSnap.val() || {};
+        const newMyScore = (meP.score || 0) + 1;
+        const newMyAmmo = Math.max(0, (meP.ammo || 0) - 1);
+        const newVDeaths = (victP.deaths || 0) + 1;
+        const healthEnabled = roomData?.healthEnabled === true;
+        const newVHealth = healthEnabled ? Math.max(0, (victP.health || 1) - 1) : 1;
+        const newVAlive = !healthEnabled || newVHealth > 0;
+        const newVAmmo = (healthEnabled && newVHealth <= 0) ? 0 : (victP.ammo || 0);
+
+        const updates = {
+          [`rooms/${roomCode}/players/${myId}/score`]: newMyScore,
+          [`rooms/${roomCode}/players/${myId}/ammo`]: newMyAmmo,
+          [`rooms/${roomCode}/players/${targetId}/deaths`]: newVDeaths,
+          [`rooms/${roomCode}/players/${targetId}/health`]: newVHealth,
+          [`rooms/${roomCode}/players/${targetId}/alive`]: newVAlive,
+          [`rooms/${roomCode}/players/${targetId}/ammo`]: newVAmmo
+        };
+        await update(ref(db), updates);
+
+        myAmmo = newMyAmmo;
+        updateHud();
+
         const hitKey = 'h_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
         await set(ref(db, `rooms/${roomCode}/hits/${hitKey}`), {
           shooterId: myId, shooterName: myName,
@@ -1318,16 +1856,17 @@
           timestamp: serverTimestamp(),
           seenBy: { [myId]: true }
         });
-        showHitFlash(victimName);
+        showHitFlash(victimName, !newVAlive);
+        playSound('hit');
       } catch (err) { setStatus('Hit failed', 'err'); }
     }
 
-    function showHitFlash(victimName) {
+    function showHitFlash(victimName, eliminated) {
       const flash = $('flash');
       flash.className = 'flash hit-flash active';
       setTimeout(() => flash.className = 'flash', 100);
       const toast = $('hitToast');
-      toast.textContent = `🎯 Tagged ${victimName}! +1`;
+      toast.textContent = eliminated ? `💀 Eliminated ${victimName}! +1` : `🎯 Tagged ${victimName}! +1`;
       toast.className = 'hit-toast active';
       setTimeout(() => toast.className = 'hit-toast', 1500);
       if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
@@ -1571,6 +2110,155 @@
       mapVisible = false;
       $('mapOverlay').classList.remove('active');
     });
+
+    function updateHud() {
+      const ammoEl = $('ammoCount');
+      if (ammoEl) {
+        ammoEl.textContent = myAmmo;
+        ammoEl.className = 'ammo-count' + (myAmmo === 0 ? ' zero' : myAmmo <= 2 ? ' low' : '');
+      }
+      const hpEl = $('hpCount');
+      if (hpEl) {
+        const hp = players[myId]?.health ?? myHealth;
+        const alive = players[myId]?.alive !== false;
+        hpEl.textContent = alive ? hp : '💀';
+      }
+    }
+
+    function ensureAudio() {
+      if (!audioCtx) {
+        try {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          audioCtx = new Ctx();
+        } catch (e) { audioCtx = null; }
+      }
+      return audioCtx;
+    }
+
+    function beep(freq, dur, type, vol) {
+      if (!soundEnabled) return;
+      const ctx = ensureAudio();
+      if (!ctx) return;
+      try {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type || 'sine';
+        osc.frequency.value = freq;
+        gain.gain.value = vol ?? 0.15;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        const now = ctx.currentTime;
+        gain.gain.setValueAtTime(gain.gain.value, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + dur / 1000);
+        osc.start(now);
+        osc.stop(now + dur / 1000);
+      } catch (e) {}
+    }
+
+    function playSound(name) {
+      if (!soundEnabled) return;
+      if (roomData?.richSound) { playRichSound(name); return; }
+      switch (name) {
+        case 'hit': beep(880, 80, 'square', 0.18); setTimeout(() => beep(1320, 60, 'square', 0.14), 60); break;
+        case 'victim': beep(220, 180, 'sawtooth', 0.22); break;
+        case 'empty': beep(140, 180, 'sawtooth', 0.18); break;
+        case 'reload': beep(660, 80, 'sine', 0.15); setTimeout(() => beep(880, 80, 'sine', 0.15), 80); break;
+        case 'tick': beep(440, 40, 'sine', 0.08); break;
+        case 'end': beep(523, 150, 'sine'); setTimeout(() => beep(659, 150, 'sine'), 150); setTimeout(() => beep(784, 300, 'sine'), 300); break;
+      }
+    }
+
+    function playRichSound(name) {
+      switch (name) {
+        case 'hit': beep(700, 60, 'square', 0.22); setTimeout(() => beep(1100, 60, 'square', 0.18), 50); setTimeout(() => beep(1500, 80, 'square', 0.14), 110); break;
+        case 'victim': beep(180, 120, 'sawtooth', 0.24); setTimeout(() => beep(120, 200, 'sawtooth', 0.22), 120); break;
+        case 'empty': beep(110, 100, 'square', 0.20); setTimeout(() => beep(90, 150, 'square', 0.18), 110); break;
+        case 'reload': beep(500, 60, 'triangle', 0.14); setTimeout(() => beep(700, 60, 'triangle', 0.14), 70); setTimeout(() => beep(900, 90, 'triangle', 0.16), 140); break;
+        case 'tick': beep(600, 50, 'sine', 0.12); break;
+        case 'end': beep(523, 120, 'triangle'); setTimeout(() => beep(659, 120, 'triangle'), 120); setTimeout(() => beep(784, 120, 'triangle'), 240); setTimeout(() => beep(1047, 400, 'triangle'), 360); break;
+      }
+    }
+
+    $('soundToggle').addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      $('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
+      if (soundEnabled) {
+        ensureAudio();
+        beep(660, 60, 'sine');
+      }
+    });
+
+    function openArsenalSheet() {
+      if (!roomCode) return;
+      const sizes = [1, 2, 3, 5, 10];
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>TagShot Arsenal — Room ${roomCode}</title>
+<style>
+body { font-family: system-ui, sans-serif; background: white; color: black; padding: 20px; }
+h1 { font-size: 20px; margin-bottom: 6px; }
+.sub { color: #666; font-size: 13px; margin-bottom: 20px; }
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.card { border: 2px dashed #999; border-radius: 12px; padding: 14px; text-align: center; break-inside: avoid; page-break-inside: avoid; }
+.card h2 { font-size: 18px; margin-bottom: 4px; color: #c2410c; }
+.card .amt { font-size: 36px; font-weight: 800; color: #000; margin: 4px 0 10px; }
+.card img { width: 100%; max-width: 220px; height: auto; }
+.card .hint { font-size: 11px; color: #888; margin-top: 6px; }
+.card .code { font-size: 10px; color: #999; font-family: monospace; margin-top: 2px; }
+.noprint { margin-top: 30px; padding: 14px; background: #f3f4f6; border-radius: 8px; font-size: 13px; }
+@media print { .noprint { display: none; } body { padding: 10px; } .grid { gap: 10px; } }
+</style></head>
+<body>
+<h1>🔫 Arsenal QR sheet — Room ${roomCode}</h1>
+<div class="sub">Print on A4, cut along dashed lines, post around your venue. Each QR has a 60-second cooldown per player.</div>
+<div class="grid">
+${sizes.flatMap((n, si) => {
+  return [1, 2].map(copy => {
+    const arsenalId = 'a' + si + '_' + copy;
+    const payload = `TAGSHOT_AMMO::${roomCode}:${arsenalId}:${n}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=520x520&margin=8&data=${encodeURIComponent(payload)}`;
+    return `<div class="card">
+      <h2>🔋 Ammo Pack</h2>
+      <div class="amt">+${n}</div>
+      <img src="${qrUrl}" alt="Ammo QR" />
+      <div class="hint">Gives ${n} shot${n !== 1 ? 's' : ''}</div>
+      <div class="code">${arsenalId}</div>
+    </div>`;
+  });
+}).join('')}
+</div>
+<div class="noprint">
+<strong>How to use:</strong> Print this page on A4 paper. Cut the cards and stick them around your play area (walls, tables, posts). During a game, a player scans an ammo QR to pick it up. After 60 seconds the same QR can be scanned again (by the same or different player).
+<br><br><button onclick="window.print()" style="padding:10px 20px;font-size:15px;">🖨️ Print this page</button>
+</div>
+</body></html>`;
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    }
+
+    function renderTeamLeaderboard() {
+      const panel = $('teamLbPanel');
+      const list = $('teamLeaderboard');
+      if (!panel || !list) return;
+      if (!roomData?.teamCount || roomData.teamCount === 0) {
+        panel.style.display = 'none';
+        return;
+      }
+      panel.style.display = 'block';
+      const teamScores = [];
+      for (let t = 0; t < roomData.teamCount; t++) {
+        const members = Object.values(players).filter(p => !p.isSpectator && p.team === t);
+        const score = members.reduce((s, p) => s + (p.score || 0), 0);
+        teamScores.push({ idx: t, name: TEAM_NAMES[t], color: TEAM_COLORS[t], score, count: members.length });
+      }
+      teamScores.sort((a, b) => b.score - a.score);
+      list.innerHTML = teamScores.map(t => `
+        <div class="team-lb-row">
+          <div class="team-swatch" style="background:${t.color}"></div>
+          <div class="team-name">${t.name} <span style="color:#888;font-size:11px;font-weight:400;">(${t.count})</span></div>
+          <div class="team-score" style="color:${t.color};">${t.score}</div>
+        </div>
+      `).join('');
+    }
 
     window.addEventListener('resize', () => { if (mapVisible || isSpectator) drawAllMaps(); });
 
