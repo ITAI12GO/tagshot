@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%237f1d1d'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%F0%9F%8E%AF%3C/text%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='32' fill='%237f1d1d'/%3E%3Ctext x='90' y='122' font-size='104' text-anchor='middle'%3E%F0%9F%8E%AF%3C/text%3E%3C/svg%3E">
-  <title>TagShot — Phase 5B.3 (Access codes)</title>
+  <title>TagShot — Phase 5B.3a (Admin URL fix)</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; overscroll-behavior: none; }
@@ -675,7 +675,7 @@
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="font-size: 56px;">🎯</div>
       <div class="h1">TagShot</div>
-      <div class="sub">Phase 5B.3 · Access codes · v20260420_1634<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
+      <div class="sub">Phase 5B.3a · Admin URL fix · v20260420_1748<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
     </div>
 
     <button class="btn primary" id="toCreateBtn">🏠 Create Room</button>
@@ -686,7 +686,7 @@
     </div>
   </div>
 
-  <div class="screen" id="adminLoginScreen">
+  <div class="screen hidden" id="adminLoginScreen">
     <div class="admin-banner">🛡️ OWNER ADMIN</div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
       <button class="btn ghost" style="width:auto;padding:8px 12px;margin:0;" onclick="goLanding()">←</button>
@@ -701,7 +701,7 @@
     <button class="btn primary" id="ownerLoginBtn">Sign In →</button>
   </div>
 
-  <div class="screen" id="adminDashboardScreen">
+  <div class="screen hidden" id="adminDashboardScreen">
     <div class="admin-banner">🛡️ OWNER ADMIN · <span id="adminStats">0 codes</span></div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
       <button class="btn ghost" style="width:auto;padding:8px 12px;margin:0;" onclick="adminLogout()">←</button>
@@ -3835,7 +3835,13 @@ ${sectionsHtml}
     window.addEventListener('error', e => showDebug('JS: ' + (e.message || e.error || 'unknown')));
     window.addEventListener('unhandledrejection', e => showDebug('Promise: ' + (e.reason?.message || e.reason || 'unknown')));
 
-    showScreen('landingScreen');
+    if (urlParams.has('admin')) {
+      showScreen('adminLoginScreen');
+    } else if (urlParams.get('room')) {
+      showScreen('joinScreen');
+    } else {
+      showScreen('landingScreen');
+    }
   </script>
 </body>
 </html>
