@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%237f1d1d'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%F0%9F%8E%AF%3C/text%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='32' fill='%237f1d1d'/%3E%3Ctext x='90' y='122' font-size='104' text-anchor='middle'%3E%F0%9F%8E%AF%3C/text%3E%3C/svg%3E">
-  <title>TagShot — Phase 5B.2 </title>
+  <title>TagShot — Phase 5B.3 (Access codes)</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; overscroll-behavior: none; }
@@ -37,6 +37,37 @@
     }
     .screen.hidden { display: none; }
     .screen.top { padding-top: 40px; }
+
+    .code-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; background: #1a1a1a;
+      border: 1px solid #2a2a2a; border-radius: 8px;
+      margin-bottom: 8px; font-size: 14px;
+    }
+    .code-item .code-val {
+      font-family: ui-monospace, monospace; font-size: 18px;
+      font-weight: 700; color: #22d3ee; letter-spacing: 2px;
+    }
+    .code-item.used .code-val { color: #666; text-decoration: line-through; }
+    .code-item .code-meta { flex: 1; font-size: 11px; color: #888; }
+    .code-item button {
+      background: #7f1d1d; border: 1px solid #991b1b;
+      color: white; padding: 6px 10px; border-radius: 6px;
+      font-size: 12px;
+    }
+    .code-item button:disabled { opacity: 0.4; }
+    .code-badge {
+      display: inline-block; font-size: 10px; padding: 2px 6px;
+      border-radius: 4px; font-weight: 600; margin-left: 6px;
+      background: #166534; color: white;
+    }
+    .code-badge.used { background: #525252; }
+    .admin-banner {
+      background: #7f1d1d; color: white; text-align: center;
+      padding: 8px 12px; font-size: 12px; font-weight: 600;
+      margin-bottom: 12px; border-radius: 8px;
+      letter-spacing: 0.5px;
+    }
 
     .logo-small { font-size: 28px; }
     .h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
@@ -644,7 +675,7 @@
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="font-size: 56px;">🎯</div>
       <div class="h1">TagShot</div>
-      <div class="sub">Phase 5B.2 · v20260420_1612<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
+      <div class="sub">Phase 5B.3 · Access codes · v20260420_1634<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
     </div>
 
     <button class="btn primary" id="toCreateBtn">🏠 Create Room</button>
@@ -653,6 +684,35 @@
     <div id="iosInstallHint" style="display:none;font-size:11px;color:#888;margin-top:10px;text-align:center;line-height:1.5;">
       iOS: tap <strong>Share</strong> ⎋, then <strong>Add to Home Screen</strong>
     </div>
+  </div>
+
+  <div class="screen" id="adminLoginScreen">
+    <div class="admin-banner">🛡️ OWNER ADMIN</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+      <button class="btn ghost" style="width:auto;padding:8px 12px;margin:0;" onclick="goLanding()">←</button>
+      <div class="h1" style="margin:0;">Owner Sign-in</div>
+    </div>
+    <div class="sub">Enter the owner password to generate access codes for hosts.</div>
+
+    <label class="label">Owner password</label>
+    <input class="input pw-input" id="ownerPwInput" placeholder="Owner password" maxlength="50" autocomplete="off">
+    <div id="ownerPwErr" style="color:#ff6b6b;font-size:12px;margin-top:4px;display:none;">Incorrect password</div>
+
+    <button class="btn primary" id="ownerLoginBtn">Sign In →</button>
+  </div>
+
+  <div class="screen" id="adminDashboardScreen">
+    <div class="admin-banner">🛡️ OWNER ADMIN · <span id="adminStats">0 codes</span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+      <button class="btn ghost" style="width:auto;padding:8px 12px;margin:0;" onclick="adminLogout()">←</button>
+      <div class="h1" style="margin:0;">Access Codes</div>
+    </div>
+    <div class="sub">Each generated code can be used once to create a room. Share codes with trusted hosts.</div>
+
+    <button class="btn primary" id="generateCodeBtn">🎲 Generate new code</button>
+
+    <div class="h2">Active codes</div>
+    <div id="codeList"><div style="color:#666;font-size:13px;">No codes yet</div></div>
   </div>
 
   <div class="screen" id="createScreen">
@@ -667,6 +727,10 @@
 
     <label class="label">Host password (4–12 characters)</label>
     <input class="input pw-input" id="hostPw" placeholder="Set a password" maxlength="12">
+
+    <label class="label">Access code (6 digits)</label>
+    <input class="input pw-input" id="createAccessCode" placeholder="From game owner" maxlength="6" inputmode="numeric" pattern="[0-9]*">
+    <div id="createAccessErr" style="color:#ff6b6b;font-size:12px;margin-top:4px;display:none;">Invalid or already-used code</div>
 
     <button class="btn primary" id="createBtn" disabled>Create Room →</button>
   </div>
@@ -1166,7 +1230,122 @@
       $('joinCode').value = urlParams.get('room').slice(0, 4);
       validateJoin();
       showScreen('joinScreen');
+    } else if (urlParams.has('admin')) {
+      showScreen('adminLoginScreen');
     }
+
+    // ---------- Admin: owner login + code generation ----------
+    let adminAuthed = false;
+    let accessCodesListener = null;
+
+    $('ownerLoginBtn').addEventListener('click', async () => {
+      const entered = $('ownerPwInput').value.trim();
+      if (!entered) return;
+      $('ownerPwErr').style.display = 'none';
+      try {
+        const snap = await get(ref(db, 'config/ownerPassword'));
+        const stored = snap.val();
+        if (!stored) {
+          $('ownerPwErr').textContent = 'Owner password not set — configure it in Firebase Console first';
+          $('ownerPwErr').style.display = 'block';
+          return;
+        }
+        if (entered !== stored) {
+          $('ownerPwErr').textContent = 'Incorrect password';
+          $('ownerPwErr').style.display = 'block';
+          return;
+        }
+        adminAuthed = true;
+        $('ownerPwInput').value = '';
+        showScreen('adminDashboardScreen');
+        subscribeAdminCodes();
+      } catch (e) {
+        $('ownerPwErr').textContent = 'Sign-in failed: ' + (e?.message || 'unknown');
+        $('ownerPwErr').style.display = 'block';
+      }
+    });
+
+    window.adminLogout = () => {
+      adminAuthed = false;
+      if (accessCodesListener) {
+        off(ref(db, 'accessCodes'));
+        accessCodesListener = null;
+      }
+      showScreen('landingScreen');
+    };
+
+    function subscribeAdminCodes() {
+      const codesRef = ref(db, 'accessCodes');
+      accessCodesListener = onValue(codesRef, snap => {
+        renderAdminCodes(snap.val() || {});
+      });
+    }
+
+    function renderAdminCodes(codes) {
+      const list = $('codeList');
+      const entries = Object.entries(codes).sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0));
+      const unused = entries.filter(([, c]) => c.status === 'unused').length;
+      const used = entries.filter(([, c]) => c.status === 'used').length;
+      $('adminStats').textContent = `${unused} unused · ${used} used`;
+      if (entries.length === 0) {
+        list.innerHTML = '<div style="color:#666;font-size:13px;">No codes yet</div>';
+        return;
+      }
+      list.innerHTML = entries.map(([code, c]) => {
+        const badge = c.status === 'unused'
+          ? '<span class="code-badge">UNUSED</span>'
+          : '<span class="code-badge used">USED</span>';
+        const meta = c.status === 'used' && c.usedByRoom
+          ? `used by room ${escapeHtml(c.usedByRoom)}`
+          : c.status === 'unused'
+            ? `created ${fmtAge(c.createdAt)}`
+            : 'used';
+        return `<div class="code-item ${c.status === 'used' ? 'used' : ''}">
+          <span class="code-val">${code}</span>
+          ${badge}
+          <span class="code-meta">${meta}</span>
+          ${c.status === 'unused'
+            ? `<button onclick="revokeCode('${code}')">Revoke</button>`
+            : `<button disabled>—</button>`}
+        </div>`;
+      }).join('');
+    }
+
+    function fmtAge(ts) {
+      if (!ts) return 'just now';
+      const ageMs = Date.now() - ts;
+      if (ageMs < 60000) return Math.floor(ageMs / 1000) + 's ago';
+      if (ageMs < 3600000) return Math.floor(ageMs / 60000) + 'm ago';
+      if (ageMs < 86400000) return Math.floor(ageMs / 3600000) + 'h ago';
+      return Math.floor(ageMs / 86400000) + 'd ago';
+    }
+
+    $('generateCodeBtn').addEventListener('click', async () => {
+      if (!adminAuthed) return;
+      const code = generate6DigitCode();
+      try {
+        await set(ref(db, 'accessCodes/' + code), {
+          status: 'unused',
+          createdAt: Date.now()
+        });
+      } catch (e) {
+        alert('Failed to generate: ' + (e?.message || 'unknown'));
+      }
+    });
+
+    function generate6DigitCode() {
+      return String(Math.floor(100000 + Math.random() * 900000));
+    }
+
+    window.revokeCode = async (code) => {
+      if (!adminAuthed) return;
+      if (!confirm('Revoke code ' + code + '? It will no longer work.')) return;
+      try {
+        await remove(ref(db, 'accessCodes/' + code));
+      } catch (e) {
+        alert('Failed to revoke: ' + (e?.message || 'unknown'));
+      }
+    };
 
     $('toCreateBtn').addEventListener('click', () => showScreen('createScreen'));
     $('toJoinBtn').addEventListener('click', () => showScreen('joinScreen'));
@@ -1207,11 +1386,17 @@
     function validateCreate() {
       $('createBtn').disabled = !(
         $('hostName').value.trim().length >= 1 &&
-        $('hostPw').value.trim().length >= 4
+        $('hostPw').value.trim().length >= 4 &&
+        $('createAccessCode').value.trim().length === 6
       );
     }
     $('hostName').addEventListener('input', validateCreate);
     $('hostPw').addEventListener('input', validateCreate);
+    $('createAccessCode').addEventListener('input', e => {
+      e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+      $('createAccessErr').style.display = 'none';
+      validateCreate();
+    });
 
     function validateJoin() {
       $('joinBtn').disabled = !(
@@ -1228,7 +1413,37 @@
     $('createBtn').addEventListener('click', async () => {
       const name = $('hostName').value.trim().slice(0, 20);
       const pw = $('hostPw').value.trim();
-      if (!name || pw.length < 4) return;
+      const accessCode = $('createAccessCode').value.trim();
+      if (!name || pw.length < 4 || accessCode.length !== 6) return;
+
+      $('createAccessErr').style.display = 'none';
+      $('createBtn').disabled = true;
+      $('createBtn').textContent = 'Verifying…';
+
+      try {
+        const codeSnap = await get(ref(db, 'accessCodes/' + accessCode));
+        if (!codeSnap.exists()) {
+          $('createAccessErr').textContent = 'Invalid access code';
+          $('createAccessErr').style.display = 'block';
+          $('createBtn').textContent = 'Create Room →';
+          validateCreate();
+          return;
+        }
+        const codeData = codeSnap.val();
+        if (codeData.status !== 'unused') {
+          $('createAccessErr').textContent = 'This code has already been used';
+          $('createAccessErr').style.display = 'block';
+          $('createBtn').textContent = 'Create Room →';
+          validateCreate();
+          return;
+        }
+      } catch (e) {
+        $('createAccessErr').textContent = 'Could not verify code: ' + (e?.message || 'unknown');
+        $('createAccessErr').style.display = 'block';
+        $('createBtn').textContent = 'Create Room →';
+        validateCreate();
+        return;
+      }
 
       let code, attempts = 0;
       while (attempts < 5) {
@@ -1237,7 +1452,27 @@
         if (!existing.exists()) break;
         attempts++;
       }
-      if (attempts >= 5) { showDebug('Could not generate a unique code, try again'); return; }
+      if (attempts >= 5) {
+        showDebug('Could not generate a unique code, try again');
+        $('createBtn').textContent = 'Create Room →';
+        validateCreate();
+        return;
+      }
+
+      // Consume the access code
+      try {
+        await update(ref(db, 'accessCodes/' + accessCode), {
+          status: 'used',
+          usedAt: Date.now(),
+          usedByRoom: code
+        });
+      } catch (e) {
+        $('createAccessErr').textContent = 'Could not consume code: ' + (e?.message || 'unknown');
+        $('createAccessErr').style.display = 'block';
+        $('createBtn').textContent = 'Create Room →';
+        validateCreate();
+        return;
+      }
 
       roomCode = code;
       roomPassword = pw;
@@ -1245,6 +1480,8 @@
       myName = name;
       isHost = true;
       isSpectator = false;
+
+      $('createBtn').textContent = 'Create Room →';
 
       const roomRef = ref(db, `rooms/${code}`);
       await set(roomRef, {
