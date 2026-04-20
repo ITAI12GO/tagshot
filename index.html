@@ -4,7 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>TagShot — Phase 5B.1 (Universal Arsenal QRs)</title>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TagShot">
+  <meta name="application-name" content="TagShot">
+  <meta name="theme-color" content="#7f1d1d">
+  <meta name="description" content="TagShot — QR code tag/shoot multiplayer game">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%237f1d1d'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%F0%9F%8E%AF%3C/text%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='32' fill='%237f1d1d'/%3E%3Ctext x='90' y='122' font-size='104' text-anchor='middle'%3E%F0%9F%8E%AF%3C/text%3E%3C/svg%3E">
+  <title>TagShot — Phase 5B.2 (PWA install)</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; overscroll-behavior: none; }
@@ -635,11 +644,15 @@
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="font-size: 56px;">🎯</div>
       <div class="h1">TagShot</div>
-      <div class="sub">Phase 5B.1 · Universal Arsenal QRs · v20260420_1605<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
+      <div class="sub">Phase 5B.2 · PWA install ready · v20260420_1612<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
     </div>
 
     <button class="btn primary" id="toCreateBtn">🏠 Create Room</button>
     <button class="btn" id="toJoinBtn">🚪 Join Room</button>
+    <button class="btn" id="installBtn" style="display:none;background:#0891b2;border-color:#0891b2;">📲 Install App</button>
+    <div id="iosInstallHint" style="display:none;font-size:11px;color:#888;margin-top:10px;text-align:center;line-height:1.5;">
+      iOS: tap <strong>Share</strong> ⎋, then <strong>Add to Home Screen</strong>
+    </div>
   </div>
 
   <div class="screen" id="createScreen">
@@ -1157,6 +1170,39 @@
 
     $('toCreateBtn').addEventListener('click', () => showScreen('createScreen'));
     $('toJoinBtn').addEventListener('click', () => showScreen('joinScreen'));
+
+    // PWA install prompt
+    let deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      const btn = $('installBtn');
+      if (btn) btn.style.display = 'block';
+    });
+    $('installBtn').addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      try {
+        await deferredInstallPrompt.userChoice;
+      } catch (e) {}
+      deferredInstallPrompt = null;
+      $('installBtn').style.display = 'none';
+    });
+    window.addEventListener('appinstalled', () => {
+      $('installBtn').style.display = 'none';
+      $('iosInstallHint').style.display = 'none';
+    });
+
+    // iOS Safari install hint (no programmatic install API)
+    (function checkIosInstallHint() {
+      const ua = navigator.userAgent || '';
+      const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+      const isStandalone = window.navigator.standalone === true;
+      if (isIOS && !isStandalone) {
+        const hint = $('iosInstallHint');
+        if (hint) hint.style.display = 'block';
+      }
+    })();
 
     function validateCreate() {
       $('createBtn').disabled = !(
