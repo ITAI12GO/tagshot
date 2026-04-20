@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>TagShot — Phase 5A.2 (Weapons + Medic + HP)</title>
+  <title>TagShot — Phase 5A.3 (Tweaks bundle)</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; overscroll-behavior: none; }
@@ -394,32 +394,113 @@
 
     .weapon-hud {
       position: absolute; bottom: 14px; left: 14px;
-      background: rgba(0,0,0,0.8); padding: 8px 14px;
-      border-radius: 10px; z-index: 7;
-      display: flex; align-items: center; gap: 10px;
-      border: 1px solid rgba(255,255,255,0.1);
-      min-width: 130px;
+      background: rgba(0,0,0,0.85); padding: 12px 16px;
+      border-radius: 12px; z-index: 7;
+      display: flex; align-items: center; gap: 12px;
+      border: 2px solid rgba(255,255,255,0.12);
+      min-width: 160px;
     }
-    .weapon-hud .weapon-icon { font-size: 22px; line-height: 1; }
-    .weapon-hud .weapon-info { display: flex; flex-direction: column; gap: 2px; }
-    .weapon-hud .weapon-name { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
-    .weapon-hud .weapon-ammo { font-size: 20px; font-weight: 700; font-family: ui-monospace, monospace; color: #fbbf24; line-height: 1; }
+    .weapon-hud .weapon-icon { font-size: 32px; line-height: 1; }
+    .weapon-hud .weapon-info { display: flex; flex-direction: column; gap: 3px; }
+    .weapon-hud .weapon-name { font-size: 13px; color: #ccc; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
+    .weapon-hud .weapon-ammo { font-size: 28px; font-weight: 800; font-family: ui-monospace, monospace; color: #fbbf24; line-height: 1; }
     .weapon-hud.none .weapon-ammo { color: #666; }
     .weapon-hud.low .weapon-ammo { color: #ff3b3b; animation: ammoPulse 0.8s infinite; }
     .weapon-hud.zero .weapon-ammo { color: #ff3b3b; }
     .weapon-hud.medic { border-color: #4ade80; }
     .weapon-hud.medic .weapon-ammo { color: #4ade80; }
+    .weapon-hud .cd-bar {
+      position: absolute; bottom: 0; left: 0; height: 3px;
+      background: #fbbf24; border-radius: 0 0 10px 10px;
+      transition: width 0.1s linear;
+    }
 
     .hp-hud {
       position: absolute; bottom: 14px; right: 14px;
-      background: rgba(0,0,0,0.8); padding: 8px 12px;
-      border-radius: 10px; z-index: 7;
-      display: flex; align-items: center; gap: 4px;
-      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(0,0,0,0.85); padding: 12px 14px;
+      border-radius: 12px; z-index: 7;
+      display: flex; align-items: center; gap: 6px;
+      border: 2px solid rgba(255,255,255,0.12);
+      flex-wrap: wrap; max-width: 180px;
     }
-    .hp-hud .hp-heart { font-size: 18px; line-height: 1; }
-    .hp-hud .hp-heart.dim { opacity: 0.25; filter: grayscale(1); }
-    .hp-hud .hp-dead { font-size: 22px; color: #888; }
+    .hp-hud .hp-heart { font-size: 26px; line-height: 1; }
+    .hp-hud .hp-heart.dim { opacity: 0.2; filter: grayscale(1); }
+    .hp-hud .hp-dead { font-size: 30px; color: #888; }
+
+    .cant-shoot-overlay {
+      position: absolute; inset: 0; pointer-events: none;
+      background: rgba(120, 0, 0, 0.35); z-index: 8;
+      display: none; align-items: center; justify-content: center;
+      backdrop-filter: grayscale(0.6);
+      -webkit-backdrop-filter: grayscale(0.6);
+    }
+    .cant-shoot-overlay.active { display: flex; }
+    .cant-shoot-msg {
+      background: rgba(0,0,0,0.85);
+      padding: 14px 22px; border-radius: 12px;
+      border: 2px solid #ff3b3b;
+      text-align: center; color: white;
+      max-width: 280px;
+    }
+    .cant-shoot-msg .big { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    .cant-shoot-msg .small { font-size: 13px; color: #ffaaaa; }
+    .cant-shoot-msg .cd-big { font-size: 42px; font-weight: 800; color: #fbbf24; font-family: ui-monospace, monospace; margin: 6px 0 2px; }
+
+    .team-panel {
+      position: absolute; top: 64px; left: 10px;
+      background: rgba(0,0,0,0.82); padding: 8px 10px;
+      border-radius: 10px; z-index: 6;
+      border: 1px solid rgba(255,255,255,0.1);
+      max-width: 180px; display: none;
+    }
+    .team-panel.active { display: block; }
+    .team-panel .tp-title { font-size: 10px; color: #aaa; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
+    .team-panel .tp-row {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; padding: 3px 0;
+    }
+    .team-panel .tp-row .tp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .team-panel .tp-row .tp-name { flex: 1; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+    .team-panel .tp-row .tp-hp { font-family: ui-monospace, monospace; font-size: 11px; color: #ff9999; }
+    .team-panel .tp-row.dead { opacity: 0.45; }
+    .team-panel .tp-row.dead .tp-hp { color: #666; }
+
+    .team-panel-toggle {
+      position: absolute; top: 14px; left: 14px;
+      background: rgba(0,0,0,0.65); width: 40px; height: 40px;
+      border-radius: 50%; border: 1px solid rgba(255,255,255,0.1);
+      display: none; align-items: center; justify-content: center;
+      font-size: 18px; color: white; z-index: 7;
+    }
+    .team-panel-toggle.visible { display: flex; }
+    .team-panel-toggle.active { background: rgba(74,222,128,0.3); border-color: #4ade80; }
+
+    .team-group {
+      display: flex; flex-direction: column; gap: 3px;
+      padding: 4px 6px; border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+      flex-shrink: 0;
+    }
+    .team-group .tg-header {
+      font-size: 10px; text-transform: uppercase;
+      font-weight: 700; letter-spacing: 0.5px;
+    }
+    .team-group .tg-members { display: flex; gap: 4px; }
+
+    .heal-preview {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) translateY(-140px);
+      background: rgba(0,0,0,0.9);
+      border: 2px solid #4ade80;
+      padding: 10px 16px; border-radius: 10px;
+      z-index: 8; pointer-events: none;
+      text-align: center; display: none;
+    }
+    .heal-preview.active { display: block; }
+    .heal-preview .hp-name { font-size: 14px; font-weight: 600; color: #fff; }
+    .heal-preview .hp-state { font-size: 18px; margin-top: 4px; }
+    .heal-preview .hp-state.full { color: #ff9999; }
+    .heal-preview .hp-state.ok { color: #4ade80; }
 
     .ammo-hud {
       position: absolute; bottom: 14px; left: 14px;
@@ -516,7 +597,7 @@
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="font-size: 56px;">🎯</div>
       <div class="h1">TagShot</div>
-      <div class="sub">Phase 5A.2 · Weapons + Medic + HP · v20260420_1038<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
+      <div class="sub">Phase 5A.3 · UX & tweaks · v20260420_1126<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
     </div>
 
     <button class="btn primary" id="toCreateBtn">🏠 Create Room</button>
@@ -618,6 +699,11 @@
         <div class="toggle-row" style="border-bottom:none;">
           <div class="tl">Lose weapon on death<br><span class="sub">If off, keep weapon and ammo after revive.</span></div>
           <label class="switch"><input type="checkbox" id="loseWeaponToggle" checked><span class="slider"></span></label>
+        </div>
+
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid #2a2a2a;">
+          <div style="font-size:12px;font-weight:600;color:#ccc;margin-bottom:8px;">Damage per hit</div>
+          <div id="weaponDamageList"></div>
         </div>
       </div>
 
@@ -732,12 +818,29 @@
     <div class="flash" id="flash"></div>
     <div class="hit-toast" id="hitToast"></div>
     <button class="sound-toggle" id="soundToggle">🔊</button>
+    <button class="team-panel-toggle" id="teamPanelToggle">👥</button>
+    <div class="team-panel" id="teamPanel">
+      <div class="tp-title">Your team</div>
+      <div id="teamPanelRows"></div>
+    </div>
+    <div class="cant-shoot-overlay" id="cantShootOverlay">
+      <div class="cant-shoot-msg">
+        <div class="big" id="cantShootBig">Can't shoot</div>
+        <div id="cantShootCd" class="cd-big" style="display:none;"></div>
+        <div class="small" id="cantShootSmall">reason</div>
+      </div>
+    </div>
+    <div class="heal-preview" id="healPreview">
+      <div class="hp-name" id="healName">Teammate</div>
+      <div class="hp-state" id="healState">❤❤❤</div>
+    </div>
     <div class="weapon-hud none" id="weaponHud">
       <span class="weapon-icon" id="weaponIcon">👐</span>
       <div class="weapon-info">
         <span class="weapon-name" id="weaponName">None</span>
         <span class="weapon-ammo" id="weaponAmmo">–</span>
       </div>
+      <div class="cd-bar" id="cdBar" style="width:0%;"></div>
     </div>
     <div class="hp-hud" id="hpHud" style="display:none;">
       <span id="hpHearts"></span>
@@ -794,6 +897,7 @@
     <div class="btn-row footer-row">
       <button class="ctrl-btn primary" id="showQrBtn" style="display:none;">📱 My QR</button>
       <button class="ctrl-btn" id="mapBtn" style="display:none;">🗺️ Map</button>
+      <button class="ctrl-btn host" id="arsenalInGameBtn" style="display:none;">🖨 Arsenal</button>
       <button class="ctrl-btn host" id="endGameBtn" style="display:none;">⏹ End</button>
       <button class="ctrl-btn host" id="extendBtn" style="display:none;">+5m</button>
       <button class="ctrl-btn danger" id="gameLeaveBtn">Leave</button>
@@ -869,7 +973,7 @@
     const TEAM_COLORS = ['#ef4444','#3b82f6','#10b981','#f59e0b','#a855f7','#ec4899','#14b8a6','#f97316','#06b6d4','#84cc16'];
     const TEAM_NAMES = ['Red','Blue','Green','Amber','Purple','Pink','Teal','Orange','Cyan','Lime'];
 
-    const WEAPONS = {
+    const DEFAULT_WEAPONS = {
       pistol:  { icon: '🔫', name: 'Pistol',  damage: 1, cooldownMs: 0,    type: 'attack', color: '#fbbf24' },
       shotgun: { icon: '💥', name: 'Shotgun', damage: 2, cooldownMs: 2000, type: 'attack', color: '#f97316' },
       sniper:  { icon: '🎯', name: 'Sniper',  damage: 3, cooldownMs: 5000, type: 'attack', color: '#a855f7' },
@@ -877,6 +981,18 @@
       medic:   { icon: '✚', name: 'Medic',   damage: 0, cooldownMs: 0,    type: 'heal',   color: '#4ade80' },
       selfheal:{ icon: '➕', name: 'Self-Heal', damage: 0, cooldownMs: 0, type: 'selfheal', color: '#4ade80' }
     };
+    const WEAPONS = DEFAULT_WEAPONS;
+    function getWeaponConfig(key) {
+      const base = DEFAULT_WEAPONS[key];
+      if (!base) return null;
+      const overrides = roomData?.weaponConfig || {};
+      const o = overrides[key] || {};
+      return {
+        ...base,
+        damage: (o.damage != null) ? o.damage : base.damage,
+        cooldownMs: (o.cooldownMs != null) ? o.cooldownMs : base.cooldownMs
+      };
+    }
 
     let roomCode = null;
     let roomPassword = null;
@@ -913,6 +1029,9 @@
     let audioCtx = null;
     let qrMarkerLastSeen = 0;
     let hitEffectsTimer = null;
+    let teamPanelVisible = false;
+    let cooldownAnimFrame = null;
+    let healPreviewTimer = null;
 
     const $ = id => document.getElementById(id);
     const showScreen = id => {
@@ -1121,7 +1240,10 @@
         renderPlayerList();
         renderScoreboard();
         renderHostDashboard();
+        renderTeamPanel();
+        renderWeaponDamageList();
         updateHud();
+        updateCantShootOverlay();
         drawAllMaps();
         handleRoomState(r);
       });
@@ -1194,6 +1316,18 @@
           b.classList.toggle('active', parseInt(b.dataset.sec) === r.locUpdateSec);
         });
       }
+      if (r.weaponConfig) {
+        for (const [k, cfg] of Object.entries(r.weaponConfig)) {
+          const slider = document.querySelector(`.weapon-dmg-input[data-weapon="${k}"]`);
+          const valEl = document.querySelector(`[data-weapon-val="${k}"]`);
+          if (slider && cfg?.damage != null && parseInt(slider.value) !== cfg.damage) {
+            slider.value = cfg.damage;
+          }
+          if (valEl && cfg?.damage != null) {
+            valEl.textContent = cfg.damage;
+          }
+        }
+      }
     }
 
     function renderPlayerList() {
@@ -1225,6 +1359,12 @@
 
     window.assignTeam = async (playerId, teamIdx) => {
       if (!isHost) return;
+      const p = players[playerId];
+      if (roomData?.state === 'active' && p) {
+        const fromTeam = p.team >= 0 ? TEAM_NAMES[p.team] : 'None';
+        const toTeam = TEAM_NAMES[teamIdx];
+        if (!confirm(`Switch ${p.name} from ${fromTeam} to ${toTeam}? Game is active — this may affect scoring.`)) return;
+      }
       await update(ref(db, `rooms/${roomCode}/players/${playerId}`), { team: teamIdx });
     };
 
@@ -1251,20 +1391,79 @@
       if (Object.keys(updates).length > 0) await update(ref(db), updates);
     }
 
+    function renderTeamPanel() {
+      const rows = $('teamPanelRows');
+      if (!rows) return;
+      if (!roomData?.teamCount || myTeam < 0) {
+        $('teamPanel').classList.remove('active');
+        return;
+      }
+      const teammates = Object.entries(players).filter(([id, p]) => !p.isSpectator && p.team === myTeam);
+      if (teammates.length === 0) {
+        rows.innerHTML = '<div style="color:#666;font-size:11px;">No teammates</div>';
+        return;
+      }
+      rows.innerHTML = teammates.map(([id, p]) => {
+        const isMe = id === myId;
+        const alive = p.alive !== false;
+        const hp = p.health || 0;
+        const maxHp = p.maxHealth || 1;
+        const hpStr = roomData?.healthEnabled ? `${hp}/${maxHp}` : (alive ? 'alive' : 'out');
+        return `<div class="tp-row ${!alive ? 'dead' : ''}">
+          <span class="tp-dot" style="background:${TEAM_COLORS[myTeam]};"></span>
+          <span class="tp-name">${escapeHtml(p.name)}${isMe ? ' (you)' : ''}</span>
+          <span class="tp-hp">${alive ? hpStr : '💀'}</span>
+        </div>`;
+      }).join('');
+    }
+
     function renderScoreboard() {
       const sb = $('scoreboard');
       if (!sb) return;
-      const entries = Object.entries(players)
-        .filter(([id, p]) => !p.isSpectator)
-        .sort((a, b) => (b[1].score || 0) - (a[1].score || 0));
-      if (entries.length === 0) { sb.innerHTML = '<div class="score-chip">Waiting…</div>'; return; }
-      sb.innerHTML = entries.map(([id, p]) => {
-        const isMe = id === myId;
-        const teamColor = (roomData?.teamCount > 0 && p.team >= 0) ? TEAM_COLORS[p.team] : null;
-        const borderStyle = teamColor ? `border-left:3px solid ${teamColor};padding-left:7px;` : '';
-        const dead = roomData?.healthEnabled && p.alive === false ? ' 💀' : '';
-        return `<div class="score-chip ${isMe ? 'me' : ''}" style="${borderStyle}">${escapeHtml(p.name || '?')}${dead} <span class="pts">${p.score || 0}</span></div>`;
-      }).join('');
+      const alive = Object.entries(players).filter(([id, p]) => !p.isSpectator);
+      if (alive.length === 0) { sb.innerHTML = '<div class="score-chip">Waiting…</div>'; return; }
+
+      const tc = roomData?.teamCount || 0;
+      if (tc === 0) {
+        const sorted = alive.sort((a, b) => (b[1].score || 0) - (a[1].score || 0));
+        sb.innerHTML = sorted.map(([id, p]) => {
+          const isMe = id === myId;
+          const dead = roomData?.healthEnabled && p.alive === false ? ' 💀' : '';
+          return `<div class="score-chip ${isMe ? 'me' : ''}">${escapeHtml(p.name || '?')}${dead} <span class="pts">${p.score || 0}</span></div>`;
+        }).join('');
+        return;
+      }
+
+      const teamBuckets = {};
+      for (let t = 0; t < tc; t++) teamBuckets[t] = [];
+      const noTeam = [];
+      for (const [id, p] of alive) {
+        if (p.team >= 0 && p.team < tc) teamBuckets[p.team].push([id, p]);
+        else noTeam.push([id, p]);
+      }
+      const teamScores = [];
+      for (let t = 0; t < tc; t++) {
+        const members = teamBuckets[t];
+        const total = members.reduce((s, [, p]) => s + (p.score || 0), 0);
+        teamScores.push({ idx: t, members, total });
+      }
+      teamScores.sort((a, b) => b.total - a.total);
+
+      sb.innerHTML = teamScores.map(t => {
+        if (t.members.length === 0) return '';
+        const color = TEAM_COLORS[t.idx];
+        const memberChips = t.members
+          .sort((a, b) => (b[1].score || 0) - (a[1].score || 0))
+          .map(([id, p]) => {
+            const isMe = id === myId;
+            const dead = roomData?.healthEnabled && p.alive === false ? ' 💀' : '';
+            return `<div class="score-chip ${isMe ? 'me' : ''}" style="border-left:3px solid ${color};padding-left:7px;">${escapeHtml(p.name || '?')}${dead} <span class="pts">${p.score || 0}</span></div>`;
+          }).join('');
+        return `<div class="team-group">
+          <div class="tg-header" style="color:${color};">T${t.idx+1} ${TEAM_NAMES[t.idx]} · ${t.total}</div>
+          <div class="tg-members">${memberChips}</div>
+        </div>`;
+      }).join('') + (noTeam.length > 0 ? `<div class="team-group"><div class="tg-header" style="color:#888;">Unassigned</div><div class="tg-members">${noTeam.map(([id, p]) => `<div class="score-chip">${escapeHtml(p.name || '?')}</div>`).join('')}</div></div>` : '');
     }
 
     function computeLastTagged() {
@@ -1360,24 +1559,85 @@
       const feedArr = Object.entries(hits || {})
         .map(([k, h]) => ({ ...h, _k: k }))
         .filter(h => h && h.shooterName && h.victimName)
-        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-        .slice(0, 30);
+        .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
-      if (feedArr.length === 0) {
+      const events = [];
+      const pending = {};
+      for (const h of feedArr) {
+        if (h.type === 'heal') {
+          events.push({
+            kind: 'heal',
+            shooter: h.shooterName, victim: h.victimName,
+            ts: h.timestamp, weapon: 'medic'
+          });
+          continue;
+        }
+        const key = h.shooterId + '>' + h.victimId;
+        if (!pending[key]) pending[key] = { shooter: h.shooterName, victim: h.victimName, hits: 0, weapon: h.weapon, ts: h.timestamp, damage: 0 };
+        pending[key].hits++;
+        pending[key].damage += (h.damage || 1);
+        pending[key].weapon = h.weapon;
+        pending[key].ts = h.timestamp;
+
+        const victimP = players[h.victimId];
+        const isEliminated = victimP?.alive === false;
+        if (isEliminated) {
+          events.push({
+            kind: 'eliminate',
+            shooter: pending[key].shooter, victim: pending[key].victim,
+            hits: pending[key].hits, weapon: pending[key].weapon,
+            damage: pending[key].damage, ts: pending[key].ts
+          });
+          delete pending[key];
+        } else {
+          events.push({
+            kind: 'hit',
+            shooter: h.shooterName, victim: h.victimName,
+            weapon: h.weapon, damage: h.damage || 1, ts: h.timestamp
+          });
+        }
+      }
+
+      events.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      const shownEvents = events.slice(0, 30);
+
+      if (shownEvents.length === 0) {
         feedEl.innerHTML = '<div class="dash-empty">No tags yet</div>';
       } else {
-        feedEl.innerHTML = feedArr.map((h, i) => {
+        feedEl.innerHTML = shownEvents.map((e, i) => {
           const highlight = i < 5 ? ` recent recent-${i+1}` : '';
-          const isHeal = h.type === 'heal';
-          const verb = isHeal ? 'healed' : (h.damage > 1 ? `tagged (${h.damage} dmg)` : 'tagged');
-          const icon = isHeal ? '✚' : (h.weapon && WEAPONS[h.weapon]?.icon) || '🎯';
-          return `<div class="feed-item${highlight}" ${isHeal ? 'style="border-left-color:#4ade80;"' : ''}>
+          if (e.kind === 'heal') {
+            return `<div class="feed-item${highlight}" style="border-left-color:#4ade80;">
+              <div class="feed-text">
+                <span class="shooter">✚ ${escapeHtml(e.shooter)}</span>
+                → healed →
+                <span class="victim">${escapeHtml(e.victim)}</span>
+              </div>
+              <div class="feed-time">${fmtClockTime(e.ts)}</div>
+            </div>`;
+          }
+          const wDef = DEFAULT_WEAPONS[e.weapon];
+          const wIcon = wDef?.icon || '🎯';
+          const wName = wDef?.name || 'weapon';
+          if (e.kind === 'eliminate') {
+            return `<div class="feed-item${highlight}" style="border-left-color:#dc2626;">
+              <div class="feed-text">
+                <span class="shooter">💀 ${escapeHtml(e.shooter)}</span>
+                → eliminated →
+                <span class="victim">${escapeHtml(e.victim)}</span>
+                <span style="color:#aaa;font-size:11px;"> (${e.hits} hit${e.hits > 1 ? 's' : ''} ${wIcon} ${wName})</span>
+              </div>
+              <div class="feed-time">${fmtClockTime(e.ts)}</div>
+            </div>`;
+          }
+          return `<div class="feed-item${highlight}">
             <div class="feed-text">
-              <span class="shooter">${icon} ${escapeHtml(h.shooterName)}</span>
-              → ${verb} →
-              <span class="victim">${escapeHtml(h.victimName)}</span>
+              <span class="shooter">${wIcon} ${escapeHtml(e.shooter)}</span>
+              → tagged →
+              <span class="victim">${escapeHtml(e.victim)}</span>
+              ${e.damage > 1 ? `<span style="color:#aaa;font-size:11px;"> -${e.damage}</span>` : ''}
             </div>
-            <div class="feed-time">${fmtClockTime(h.timestamp)}</div>
+            <div class="feed-time">${fmtClockTime(e.ts)}</div>
           </div>`;
         }).join('');
       }
@@ -1549,6 +1809,44 @@
       await update(ref(db, `rooms/${roomCode}`), { richSound: e.target.checked });
     });
     $('arsenalPrintBtn').addEventListener('click', () => { if (roomCode) openArsenalSheet(); });
+    $('arsenalInGameBtn').addEventListener('click', () => { if (roomCode) openArsenalSheet(); });
+
+    $('teamPanelToggle').addEventListener('click', () => {
+      teamPanelVisible = !teamPanelVisible;
+      $('teamPanelToggle').classList.toggle('active', teamPanelVisible);
+      $('teamPanel').classList.toggle('active', teamPanelVisible);
+      renderTeamPanel();
+    });
+
+    function renderWeaponDamageList() {
+      const el = $('weaponDamageList');
+      if (!el || !isHost) return;
+      const configurable = ['pistol','shotgun','sniper','uzi'];
+      const overrides = roomData?.weaponConfig || {};
+      el.innerHTML = configurable.map(k => {
+        const w = DEFAULT_WEAPONS[k];
+        const cur = overrides[k]?.damage != null ? overrides[k].damage : w.damage;
+        return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;">
+          <span style="font-size:18px;min-width:28px;">${w.icon}</span>
+          <span style="flex:1;font-size:13px;">${w.name}</span>
+          <input type="range" min="1" max="10" step="1" value="${cur}" data-weapon="${k}" class="weapon-dmg-input" style="flex:2;">
+          <span class="weapon-dmg-val" data-weapon-val="${k}" style="font-family:monospace;color:#fbbf24;min-width:28px;text-align:right;font-weight:600;">${cur}</span>
+        </div>`;
+      }).join('');
+      el.querySelectorAll('.weapon-dmg-input').forEach(inp => {
+        inp.addEventListener('input', e => {
+          const k = e.target.dataset.weapon;
+          const v = parseInt(e.target.value);
+          el.querySelector(`[data-weapon-val="${k}"]`).textContent = v;
+        });
+        inp.addEventListener('change', async e => {
+          if (!isHost) return;
+          const k = e.target.dataset.weapon;
+          const v = parseInt(e.target.value);
+          await update(ref(db, `rooms/${roomCode}/weaponConfig/${k}`), { damage: v });
+        });
+      });
+    }
 
     $('startGameBtn').addEventListener('click', async () => {
       if (!isHost) return;
@@ -1626,10 +1924,20 @@
 
       $('endGameBtn').style.display = isHost ? 'block' : 'none';
       $('extendBtn').style.display = (isHost && r.endsAt) ? 'block' : 'none';
+      $('arsenalInGameBtn').style.display = isHost ? 'block' : 'none';
+
+      if (r.teamCount > 0 && myTeam >= 0 && !isSpectator) {
+        $('teamPanelToggle').classList.add('visible');
+      } else {
+        $('teamPanelToggle').classList.remove('visible');
+        $('teamPanel').classList.remove('active');
+      }
 
       showScreen(null);
       setStatus(isSpectator ? 'Moderating…' : 'Scanning…', 'ok');
       updateHud();
+      updateCantShootOverlay();
+      startCooldownTicker();
     }
 
     function updateTimer(r) {
@@ -1674,6 +1982,8 @@
       if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
       if (dashRepaintInterval) { clearInterval(dashRepaintInterval); dashRepaintInterval = null; }
       if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+      stopCooldownTicker();
+      $('cantShootOverlay')?.classList.remove('active');
       playSound('end');
       $('gameHeader').style.display = 'none';
       $('gameFooter').style.display = 'none';
@@ -1780,6 +2090,7 @@
       if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
       if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
       if (dashRepaintInterval) { clearInterval(dashRepaintInterval); dashRepaintInterval = null; }
+      stopCooldownTicker();
       stopLocationTracking();
       roomCode = null; myId = null; roomPassword = null;
     }
@@ -1896,7 +2207,8 @@
       const meP = players[myId] || {};
       if (roomData?.healthEnabled && meP.alive === false) {
         if (roomData?.selfHealAllowed) setStatus('Eliminated — find a Self-Heal QR', 'err');
-        else setStatus('Eliminated — wait for a medic', 'err');
+        else if (roomData?.teamCount > 0) setStatus('Eliminated — wait for a medic', 'err');
+        else setStatus('Eliminated — wait for next round', 'err');
         return;
       }
       if (roomData?.geoFenceEnabled && geoFenceCenter && myCoords) {
@@ -1940,7 +2252,7 @@
         setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
         return;
       }
-      const w = WEAPONS[myWeapon];
+      const w = getWeaponConfig(myWeapon);
       if (roomData?.weaponCooldowns && w?.cooldownMs > 0) {
         const lastFire = lastWeaponFire[myWeapon] || 0;
         if ((now - lastFire) < w.cooldownMs) {
@@ -1970,21 +2282,20 @@
       const tMax = target.maxHealth || 1;
       const alreadyFull = target.alive !== false && tHp >= tMax;
 
+      showHealPreview(target.name, tHp, tMax, alreadyFull);
+
+      if (alreadyFull) {
+        setStatus(`${target.name} at full HP — scan skipped`, 'err');
+        setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
+        return;
+      }
+
       try {
         const mySnap = await get(ref(db, `rooms/${roomCode}/players/${myId}/ammo`));
         const newCharges = Math.max(0, (mySnap.val() || 0) - 1);
         const updates = {
           [`rooms/${roomCode}/players/${myId}/ammo`]: newCharges
         };
-
-        if (alreadyFull) {
-          await update(ref(db), updates);
-          myAmmo = newCharges;
-          updateHud();
-          setStatus(`${target.name} already at full HP — charge wasted`, 'err');
-          playSound('empty');
-          return;
-        }
 
         const newHp = Math.min(tMax, tHp + 1);
         const wasDown = target.alive === false;
@@ -2029,6 +2340,21 @@
       }
     }
 
+    function showHealPreview(name, hp, maxHp, isFull) {
+      const el = $('healPreview');
+      const nameEl = $('healName');
+      const stateEl = $('healState');
+      if (!el) return;
+      nameEl.textContent = name;
+      const hearts = [];
+      for (let i = 0; i < maxHp; i++) hearts.push(i < hp ? '❤' : '🖤');
+      stateEl.textContent = hearts.join('') + (isFull ? ' · FULL HP' : '');
+      stateEl.className = 'hp-state ' + (isFull ? 'full' : 'ok');
+      el.classList.add('active');
+      if (healPreviewTimer) clearTimeout(healPreviewTimer);
+      healPreviewTimer = setTimeout(() => el.classList.remove('active'), 1500);
+    }
+
     async function handleAmmoScan(raw) {
       const parts = raw.slice(AMMO_QR_PREFIX.length).split(':');
       if (parts.length < 3) { setStatus('Invalid Arsenal QR', 'err'); return; }
@@ -2065,7 +2391,7 @@
           return;
         }
         if (!roomData?.selfHealAllowed) {
-          setStatus('Self-heal disabled — wait for a medic', 'err');
+          setStatus('Self-heal disabled by host', 'err');
           return;
         }
         const now = Date.now();
@@ -2139,7 +2465,7 @@
 
     async function scoreHit(targetId) {
       const victimName = players[targetId]?.name || 'Player';
-      const w = WEAPONS[myWeapon];
+      const w = getWeaponConfig(myWeapon);
       const damage = w?.damage || 1;
       try {
         const mySnap = await get(ref(db, `rooms/${roomCode}/players/${myId}`));
@@ -2500,6 +2826,84 @@
             hearts.innerHTML = bits.join('');
           }
         }
+      }
+    }
+
+    function getCantShootReason() {
+      if (!roomData || roomData.state !== 'active') return null;
+      if (isSpectator) return null;
+      const p = players[myId];
+      if (!p) return null;
+      if (roomData.healthEnabled && p.alive === false) {
+        return { big: 'ELIMINATED', small: roomData.selfHealAllowed ? 'Find a Self-Heal QR' : (roomData.teamCount > 0 ? 'Wait for a medic' : 'Wait for next round'), cd: null };
+      }
+      if (!myWeapon) {
+        return { big: 'NO WEAPON', small: 'Find an Arsenal QR', cd: null };
+      }
+      if (myWeapon === 'medic') return null;
+      if (myAmmo <= 0) {
+        return { big: 'OUT OF AMMO', small: 'Scan an Arsenal QR', cd: null };
+      }
+      if (roomData.weaponCooldowns !== false) {
+        const wCfg = getWeaponConfig(myWeapon);
+        if (wCfg && wCfg.cooldownMs > 0) {
+          const last = lastWeaponFire[myWeapon] || 0;
+          const elapsed = Date.now() - last;
+          if (elapsed < wCfg.cooldownMs) {
+            const remaining = wCfg.cooldownMs - elapsed;
+            return {
+              big: wCfg.name.toUpperCase() + ' COOLDOWN',
+              small: 'Reloading…',
+              cd: (remaining / 1000).toFixed(1) + 's',
+              pct: (elapsed / wCfg.cooldownMs) * 100
+            };
+          }
+        }
+      }
+      return null;
+    }
+
+    function updateCantShootOverlay() {
+      const overlay = $('cantShootOverlay');
+      const bigEl = $('cantShootBig');
+      const smallEl = $('cantShootSmall');
+      const cdEl = $('cantShootCd');
+      const cdBar = $('cdBar');
+      if (!overlay) return;
+      const reason = getCantShootReason();
+      if (!reason) {
+        overlay.classList.remove('active');
+        if (cdBar) cdBar.style.width = '0%';
+        return;
+      }
+      overlay.classList.add('active');
+      bigEl.textContent = reason.big;
+      smallEl.textContent = reason.small;
+      if (reason.cd) {
+        cdEl.style.display = 'block';
+        cdEl.textContent = reason.cd;
+      } else {
+        cdEl.style.display = 'none';
+      }
+      if (cdBar && reason.pct != null) {
+        cdBar.style.width = reason.pct + '%';
+      } else if (cdBar) {
+        cdBar.style.width = '0%';
+      }
+    }
+
+    function startCooldownTicker() {
+      stopCooldownTicker();
+      function tick() {
+        updateCantShootOverlay();
+        cooldownAnimFrame = requestAnimationFrame(tick);
+      }
+      cooldownAnimFrame = requestAnimationFrame(tick);
+    }
+    function stopCooldownTicker() {
+      if (cooldownAnimFrame) {
+        cancelAnimationFrame(cooldownAnimFrame);
+        cooldownAnimFrame = null;
       }
     }
 
