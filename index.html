@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>TagShot — Phase 5A.5 (Ammo cap + fixes)</title>
+  <title>TagShot — Phase 5A.8 (Scan diagnostic banner)</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; overscroll-behavior: none; }
@@ -504,6 +504,42 @@
     .heal-preview .hp-state.full { color: #ff9999; }
     .heal-preview .hp-state.ok { color: #4ade80; }
 
+    .protect-badge {
+      position: absolute; top: 64px; right: 14px;
+      background: linear-gradient(135deg, #22d3ee, #4ade80);
+      color: #000; font-weight: 800; font-size: 12px;
+      padding: 6px 12px; border-radius: 14px;
+      z-index: 8; display: none;
+      box-shadow: 0 0 20px rgba(74,222,128,0.8);
+      animation: protectPulse 1.2s ease-in-out infinite;
+    }
+    .protect-badge.active { display: block; }
+    @keyframes protectPulse {
+      0%,100% { box-shadow: 0 0 20px rgba(74,222,128,0.8); }
+      50% { box-shadow: 0 0 30px rgba(74,222,128,1); }
+    }
+
+    .weapon-hud.protected {
+      border-color: #4ade80 !important;
+      box-shadow: 0 0 18px rgba(74,222,128,0.6);
+    }
+    .hp-hud.protected {
+      border-color: #4ade80 !important;
+      box-shadow: 0 0 18px rgba(74,222,128,0.6);
+    }
+
+    .scan-debug {
+      position: absolute; top: 56px; left: 10px; right: 10px;
+      background: rgba(20,20,30,0.92); color: #ffb74d;
+      font-family: ui-monospace, monospace; font-size: 10px;
+      padding: 6px 8px; border-radius: 6px;
+      z-index: 9; border: 1px solid #ffb74d;
+      line-height: 1.3; max-height: 70px; overflow-y: auto;
+      display: none; pointer-events: none;
+      word-break: break-all;
+    }
+    .scan-debug.active { display: block; }
+
     .ammo-hud {
       position: absolute; bottom: 14px; left: 14px;
       background: rgba(0,0,0,0.75); padding: 8px 14px;
@@ -599,7 +635,7 @@
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="font-size: 56px;">🎯</div>
       <div class="h1">TagShot</div>
-      <div class="sub">Phase 5A.5 · Ammo cap + bug fixes · v20260420_1458<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
+      <div class="sub">Phase 5A.8 · Scan diagnostic banner · v20260420_1536<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
     </div>
 
     <button class="btn primary" id="toCreateBtn">🏠 Create Room</button>
@@ -746,6 +782,16 @@
           <div class="tl">…also in team mode<br><span class="sub">If off: in team games, only medics can revive (more cooperative).</span></div>
           <label class="switch"><input type="checkbox" id="teamSelfHealToggle"><span class="slider"></span></label>
         </div>
+
+        <label class="label" style="margin-top:10px;">Post-revive protection</label>
+        <div class="seg" id="reviveProtectSeg">
+          <button data-n="0">None</button>
+          <button data-n="30">30s</button>
+          <button data-n="60" class="active">60s</button>
+          <button data-n="90">90s</button>
+          <button data-n="120">120s</button>
+        </div>
+        <div style="font-size:11px;color:#666;margin-top:4px;">Revived players can't be damaged for this many seconds (can still attack).</div>
       </div>
 
       <div class="toggle-row">
@@ -760,6 +806,10 @@
       <div class="toggle-row">
         <div class="tl">Host plays<br><span class="sub">If off, host only moderates.</span></div>
         <label class="switch"><input type="checkbox" id="hostPlaysToggle" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="tl">🐛 Diagnostic banner<br><span class="sub">Shows what every scan decided (debug). Local only.</span></div>
+        <label class="switch"><input type="checkbox" id="debugBannerToggle"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
         <div class="tl">Allow late-joining<br><span class="sub">Players can join after start.</span></div>
@@ -849,6 +899,8 @@
       <div class="hp-name" id="healName">Teammate</div>
       <div class="hp-state" id="healState">❤❤❤</div>
     </div>
+    <div class="protect-badge" id="protectBadge">🛡 PROTECTED <span id="protectCd">60s</span></div>
+    <div class="scan-debug" id="scanDebug">Diagnostic: (no scan yet)</div>
     <div class="weapon-hud none" id="weaponHud">
       <span class="weapon-icon" id="weaponIcon">👐</span>
       <div class="weapon-info">
@@ -1160,6 +1212,7 @@
         healScore: 1,
         selfHealAllowed: false,
         teamModeSelfHealAllowed: false,
+        reviveProtectSec: 60,
         richSound: false,
         createdAt: serverTimestamp()
       });
@@ -1344,6 +1397,11 @@
         $('teamSelfHealRow').style.display = r.selfHealAllowed ? 'flex' : 'none';
       }
       if (r.teamModeSelfHealAllowed != null) $('teamSelfHealToggle').checked = r.teamModeSelfHealAllowed;
+      if (r.reviveProtectSec != null) {
+        document.querySelectorAll('#reviveProtectSeg button').forEach(b => {
+          b.classList.toggle('active', parseInt(b.dataset.n) === r.reviveProtectSec);
+        });
+      }
       if (r.richSound != null) $('richSoundToggle').checked = r.richSound;
       if (r.locEnabled != null) $('locEnableToggle').checked = r.locEnabled;
       if (r.geoFenceEnabled != null) $('geofenceToggle').checked = r.geoFenceEnabled;
@@ -1742,6 +1800,19 @@
       await update(ref(db, `rooms/${roomCode}`), { hostPlays: e.target.checked });
       await update(ref(db, `rooms/${roomCode}/players/${myId}`), { isSpectator: !e.target.checked });
     });
+    let debugBannerEnabled = false;
+    $('debugBannerToggle').addEventListener('change', e => {
+      debugBannerEnabled = e.target.checked;
+      const banner = $('scanDebug');
+      if (banner) banner.classList.toggle('active', debugBannerEnabled);
+    });
+    function scanDebugLog(msg) {
+      if (!debugBannerEnabled) return;
+      const banner = $('scanDebug');
+      if (!banner) return;
+      const ts = new Date().toISOString().slice(11, 19);
+      banner.textContent = '[' + ts + '] ' + msg;
+    }
     $('lateJoinToggle').addEventListener('change', async e => {
       if (!isHost) return;
       await update(ref(db, `rooms/${roomCode}`), { allowLateJoin: e.target.checked });
@@ -1859,6 +1930,14 @@
       if (!isHost) return;
       await update(ref(db, `rooms/${roomCode}`), { teamModeSelfHealAllowed: e.target.checked });
     });
+    document.querySelectorAll('#reviveProtectSeg button').forEach(b => {
+      b.addEventListener('click', async () => {
+        if (!isHost) return;
+        document.querySelectorAll('#reviveProtectSeg button').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        await update(ref(db, `rooms/${roomCode}`), { reviveProtectSec: parseInt(b.dataset.n) });
+      });
+    });
     $('richSoundToggle').addEventListener('change', async e => {
       if (!isHost) return;
       await update(ref(db, `rooms/${roomCode}`), { richSound: e.target.checked });
@@ -1934,6 +2013,7 @@
         resetUpdates[`rooms/${roomCode}/players/${id}/health`] = startingHp;
         resetUpdates[`rooms/${roomCode}/players/${id}/maxHealth`] = startingHp;
         resetUpdates[`rooms/${roomCode}/players/${id}/alive`] = true;
+        resetUpdates[`rooms/${roomCode}/players/${id}/protectedUntil`] = 0;
       }
       resetUpdates[`rooms/${roomCode}/hits`] = null;
       resetUpdates[`rooms/${roomCode}/arsenalClaims`] = null;
@@ -2130,6 +2210,7 @@
         resetUpdates[`rooms/${roomCode}/players/${id}/health`] = startingHp;
         resetUpdates[`rooms/${roomCode}/players/${id}/maxHealth`] = startingHp;
         resetUpdates[`rooms/${roomCode}/players/${id}/alive`] = true;
+        resetUpdates[`rooms/${roomCode}/players/${id}/protectedUntil`] = 0;
       }
       resetUpdates[`rooms/${roomCode}/hits`] = null;
       resetUpdates[`rooms/${roomCode}/arsenalClaims`] = null;
@@ -2238,10 +2319,15 @@
 
     function handleScan(raw) {
       const now = Date.now();
-      if (raw === lastScanRaw && (now - lastScanTime) < 500) return;
+      if (raw === lastScanRaw && (now - lastScanTime) < 500) {
+        scanDebugLog('DEBOUNCED: ' + raw.slice(0, 40));
+        return;
+      }
       lastScanRaw = raw; lastScanTime = now;
+      scanDebugLog('SCAN: ' + raw.slice(0, 50));
 
       if (raw.startsWith(AMMO_QR_PREFIX)) {
+        scanDebugLog('→ Arsenal QR path');
         handleAmmoScan(raw);
         return;
       }
@@ -2347,7 +2433,8 @@
       }
       const tHp = target.health || 0;
       const tMax = target.maxHealth || 1;
-      const alreadyFull = target.alive !== false && tHp >= tMax;
+      const wasDown = target.alive === false || tHp <= 0;
+      const alreadyFull = !wasDown && tHp >= tMax;
 
       showHealPreview(target.name, tHp, tMax, alreadyFull);
 
@@ -2358,16 +2445,19 @@
       }
 
       try {
-        const mySnap = await get(ref(db, `rooms/${roomCode}/players/${myId}/ammo`));
-        const newCharges = Math.max(0, (mySnap.val() || 0) - 1);
+        const charges = myAmmo;
+        const targetHpBefore = wasDown ? 0 : tHp;
+        const missing = tMax - targetHpBefore;
+        const newHp = tMax;
+        const consumed = charges;
+        const wasted = Math.max(0, charges - missing);
+
         const updates = {
-          [`rooms/${roomCode}/players/${myId}/ammo`]: newCharges
+          [`rooms/${roomCode}/players/${myId}/ammo`]: 0,
+          [`rooms/${roomCode}/players/${targetId}/health`]: newHp,
+          [`rooms/${roomCode}/players/${targetId}/alive`]: true
         };
 
-        const newHp = Math.min(tMax, tHp + 1);
-        const wasDown = target.alive === false;
-        updates[`rooms/${roomCode}/players/${targetId}/health`] = newHp;
-        updates[`rooms/${roomCode}/players/${targetId}/alive`] = true;
         if (wasDown) {
           const sw = roomData?.startWeapon || 'pistol';
           const sa = roomData?.startingAmmo ?? 3;
@@ -2376,7 +2466,11 @@
           const effSa = capEnabled ? Math.min(cap, sa) : sa;
           updates[`rooms/${roomCode}/players/${targetId}/weapon`] = sw === 'none' ? null : 'pistol';
           updates[`rooms/${roomCode}/players/${targetId}/ammo`] = sw === 'none' ? 0 : effSa;
+          const protectSec = roomData?.reviveProtectSec ?? 60;
+          const protectUntil = protectSec > 0 ? Date.now() + protectSec * 1000 : 0;
+          updates[`rooms/${roomCode}/players/${targetId}/protectedUntil`] = protectUntil;
         }
+
         const healScore = roomData?.healScore ?? 1;
         if (healScore > 0) {
           const sSnap = await get(ref(db, `rooms/${roomCode}/players/${myId}/score`));
@@ -2386,14 +2480,18 @@
         updates[`rooms/${roomCode}/players/${myId}/heals`] = (hSnap.val() || 0) + 1;
 
         await update(ref(db), updates);
-        myAmmo = newCharges;
+        myAmmo = 0;
         updateHud();
 
         const toast = $('hitToast');
-        toast.textContent = wasDown ? `✚ Revived ${target.name}!` : `✚ Healed ${target.name} +1 HP`;
+        if (wasDown) {
+          toast.textContent = `✚ Revived ${target.name} to full HP! (${consumed} charges used${wasted > 0 ? `, ${wasted} wasted` : ''})`;
+        } else {
+          toast.textContent = `✚ Healed ${target.name} to full! (${consumed} charges used${wasted > 0 ? `, ${wasted} wasted` : ''})`;
+        }
         toast.className = 'hit-toast active';
         toast.style.borderColor = '#4ade80';
-        setTimeout(() => { toast.className = 'hit-toast'; toast.style.borderColor = ''; }, 1500);
+        setTimeout(() => { toast.className = 'hit-toast'; toast.style.borderColor = ''; }, 2000);
         playSound('heal');
         if (navigator.vibrate) navigator.vibrate([40, 20, 40, 20, 40]);
 
@@ -2427,33 +2525,40 @@
 
     async function handleAmmoScan(raw) {
       const parts = raw.slice(AMMO_QR_PREFIX.length).split(':');
-      if (parts.length < 3) { setStatus('Invalid Arsenal QR', 'err'); return; }
+      scanDebugLog('Arsenal parts=' + parts.length + ' ' + parts.join('|'));
+      if (parts.length < 3) { setStatus('Invalid Arsenal QR', 'err'); scanDebugLog('BLOCK: invalid parts'); return; }
       const targetRoom = parts[0];
       const arsenalId = parts[1];
       const third = parts[2];
       const weaponType = (parts.length >= 4) ? third : 'pistol';
       const amount = (parts.length >= 4) ? parseInt(parts[3]) : parseInt(third);
+      scanDebugLog('weapon=' + weaponType + ' amt=' + amount + ' room=' + targetRoom);
 
       if (targetRoom !== roomCode) {
         setStatus('Arsenal is for a different room', 'err');
+        scanDebugLog('BLOCK: wrong room (' + targetRoom + ' vs ' + roomCode + ')');
         return;
       }
       if (!amount || amount < 1) {
         setStatus('Invalid ammo amount', 'err');
+        scanDebugLog('BLOCK: invalid amount');
         return;
       }
       if (!WEAPONS[weaponType]) {
         setStatus('Unknown weapon type', 'err');
+        scanDebugLog('BLOCK: unknown weapon type ' + weaponType);
         return;
       }
       if (roomData?.state !== 'active') {
         setStatus('Game not active', 'err');
+        scanDebugLog('BLOCK: state=' + roomData?.state);
         return;
       }
 
       const meP = players[myId] || {};
       const isDead = roomData?.healthEnabled && (meP.alive === false || meP.health === 0 || meP.health < 0);
       const wDef = WEAPONS[weaponType];
+      scanDebugLog('isDead=' + isDead + ' hp=' + meP.health + ' alive=' + meP.alive);
 
       if (isDead) {
         if (wDef.type !== 'selfheal') {
@@ -2468,6 +2573,13 @@
           setStatus('In team mode — wait for a medic', 'err');
           return;
         }
+        const shNow = Date.now();
+        const shLast = lastArsenalScans[arsenalId] || 0;
+        if ((shNow - shLast) < ARSENAL_COOLDOWN_MS) {
+          const wait = Math.ceil((ARSENAL_COOLDOWN_MS - (shNow - shLast)) / 1000);
+          setStatus(`Self-Heal cooldown — ${wait}s`, 'err');
+          return;
+        }
         try {
           const sw = roomData?.startWeapon || 'pistol';
           const sa = roomData?.startingAmmo ?? 3;
@@ -2477,13 +2589,17 @@
           const reviveWeapon = sw === 'none' ? null : 'pistol';
           const reviveAmmo = sw === 'none' ? 0 : effSa;
           const reviveHp = 1;
+          const protectSec = roomData?.reviveProtectSec ?? 60;
+          const protectUntil = protectSec > 0 ? Date.now() + protectSec * 1000 : 0;
           await update(ref(db), {
             [`rooms/${roomCode}/players/${myId}/health`]: reviveHp,
             [`rooms/${roomCode}/players/${myId}/alive`]: true,
             [`rooms/${roomCode}/players/${myId}/weapon`]: reviveWeapon,
-            [`rooms/${roomCode}/players/${myId}/ammo`]: reviveAmmo
+            [`rooms/${roomCode}/players/${myId}/ammo`]: reviveAmmo,
+            [`rooms/${roomCode}/players/${myId}/protectedUntil`]: protectUntil
           });
           lastArsenalScans = {};
+          lastArsenalScans[arsenalId] = shNow;
           lastWeaponFire = {};
           myAmmo = reviveAmmo;
           myWeapon = reviveWeapon;
@@ -2506,9 +2622,62 @@
       }
 
       if (wDef.type === 'selfheal') {
-        setStatus('You\'re not eliminated', 'err');
+        scanDebugLog('→ SelfHeal top-up path');
+        if (!roomData?.healthEnabled) {
+          setStatus('Health system is off', 'err');
+          scanDebugLog('BLOCK: health off');
+          return;
+        }
+        if (!roomData?.selfHealAllowed) {
+          setStatus('Self-heal disabled by host', 'err');
+          scanDebugLog('BLOCK: selfHeal off');
+          return;
+        }
+        if (roomData?.teamCount > 0 && !roomData?.teamModeSelfHealAllowed) {
+          setStatus('Self-heal off in team mode', 'err');
+          scanDebugLog('BLOCK: teamMode selfHeal off');
+          return;
+        }
+        const curHp = meP.health ?? 1;
+        const maxHp = meP.maxHealth ?? roomData?.startingHp ?? 3;
+        scanDebugLog('hp=' + curHp + '/' + maxHp);
+        if (curHp >= maxHp) {
+          setStatus(`Already at full HP (${curHp}/${maxHp})`, 'err');
+          scanDebugLog('BLOCK: already full');
+          return;
+        }
+        const shNow = Date.now();
+        const shLast = lastArsenalScans[arsenalId] || 0;
+        if ((shNow - shLast) < ARSENAL_COOLDOWN_MS) {
+          const wait = Math.ceil((ARSENAL_COOLDOWN_MS - (shNow - shLast)) / 1000);
+          setStatus(`Self-Heal cooldown — ${wait}s`, 'err');
+          scanDebugLog('BLOCK: cooldown ' + wait + 's');
+          return;
+        }
+        lastArsenalScans[arsenalId] = shNow;
+        try {
+          const newHp = Math.min(maxHp, curHp + 1);
+          await update(ref(db), {
+            [`rooms/${roomCode}/players/${myId}/health`]: newHp
+          });
+          myHealth = newHp;
+          updateHud();
+          const toast = $('hitToast');
+          toast.textContent = `✚ +1 HP (${newHp}/${maxHp})`;
+          toast.className = 'hit-toast active';
+          toast.style.borderColor = '#4ade80';
+          setTimeout(() => { toast.className = 'hit-toast'; toast.style.borderColor = ''; }, 1500);
+          setStatus(`Healed +1 HP (${newHp}/${maxHp})`, 'ok');
+          playSound('heal');
+          scanDebugLog('OK: healed ' + curHp + '→' + newHp);
+          if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
+        } catch (e) {
+          setStatus('Heal failed: ' + (e?.message || 'unknown'), 'err');
+          scanDebugLog('ERROR: ' + (e?.message || e));
+        }
         return;
       }
+      scanDebugLog('→ Regular ammo path (weapon=' + weaponType + ')');
 
       const now = Date.now();
       const lastClaim = lastArsenalScans[arsenalId] || 0;
@@ -2589,6 +2758,13 @@
         const vSnap = await get(ref(db, `rooms/${roomCode}/players/${targetId}`));
         const meP = mySnap.val() || {};
         const victP = vSnap.val() || {};
+        const protectedUntil = victP.protectedUntil || 0;
+        if (protectedUntil > Date.now()) {
+          const remain = Math.ceil((protectedUntil - Date.now()) / 1000);
+          setStatus(`${victimName} is protected (${remain}s)`, 'err');
+          setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
+          return;
+        }
         const healthEnabled = roomData?.healthEnabled === true;
         const vHpBefore = healthEnabled ? (victP.health || 1) : 1;
         const vHpAfter = Math.max(0, vHpBefore - damage);
@@ -2944,6 +3120,22 @@
           }
         }
       }
+
+      const protectedUntil = p?.protectedUntil || 0;
+      const nowMs = Date.now();
+      const isProtected = protectedUntil > nowMs && alive;
+      const badge = $('protectBadge');
+      if (badge) {
+        if (isProtected) {
+          const remain = Math.ceil((protectedUntil - nowMs) / 1000);
+          $('protectCd').textContent = remain + 's';
+          badge.classList.add('active');
+        } else {
+          badge.classList.remove('active');
+        }
+      }
+      if (hud) hud.classList.toggle('protected', isProtected);
+      if (hpHud) hpHud.classList.toggle('protected', isProtected);
     }
 
     function getCantShootReason() {
@@ -3016,8 +3208,14 @@
 
     function startCooldownTicker() {
       stopCooldownTicker();
+      let hudCounter = 0;
       function tick() {
         updateCantShootOverlay();
+        hudCounter++;
+        if (hudCounter >= 10) {
+          hudCounter = 0;
+          updateHud();
+        }
         cooldownAnimFrame = requestAnimationFrame(tick);
       }
       cooldownAnimFrame = requestAnimationFrame(tick);
