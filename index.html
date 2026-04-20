@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>TagShot — Phase 3.1 (Host Dashboard)</title>
+  <title>TagShot — Phase 4 (Map + Location)</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; overscroll-behavior: none; }
@@ -306,6 +306,71 @@
       padding: 20px; text-align: center; color: #555; font-size: 12px;
     }
 
+    .map-overlay {
+      position: absolute; inset: 0;
+      background: rgba(10,10,10,0.96);
+      z-index: 30;
+      display: none;
+      flex-direction: column;
+    }
+    .map-overlay.active { display: flex; }
+    .map-top {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; background: #141414; border-bottom: 1px solid #2a2a2a;
+    }
+    .map-top .mtl { font-size: 14px; font-weight: 600; }
+    .map-top .mts { font-size: 11px; color: #888; margin-top: 2px; }
+    .map-close {
+      background: #1e1e1e; color: white; border: 1px solid #333;
+      padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    }
+    .map-canvas-wrap {
+      flex: 1; position: relative; background: #111;
+      background-image:
+        linear-gradient(rgba(74,222,128,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(74,222,128,0.06) 1px, transparent 1px);
+      background-size: 40px 40px;
+      overflow: hidden;
+    }
+    #mapCanvas { width: 100%; height: 100%; display: block; }
+
+    .map-legend {
+      padding: 8px 14px; background: #141414;
+      border-top: 1px solid #2a2a2a; font-size: 11px; color: #888;
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+    }
+    .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; margin-right: 4px; }
+    .legend-dot.me { background: #4ade80; }
+    .legend-dot.other { background: #60a5fa; }
+    .legend-dot.host { background: #fbbf24; }
+    .legend-dot.fence { background: transparent; border: 2px dashed #ff3b3b; }
+
+    .map-status {
+      padding: 8px 14px; background: #1a1a1a;
+      font-size: 11px; color: #aaa; text-align: center;
+      border-top: 1px solid #2a2a2a;
+    }
+    .map-status.err { color: #ff9999; }
+    .map-status.warn { color: #fbbf24; }
+
+    .dist-chip {
+      font-size: 10px; color: #666; margin-left: 6px;
+      font-family: ui-monospace, monospace;
+    }
+    .dist-chip.close { color: #fbbf24; font-weight: 600; }
+    .dist-chip.tooclose { color: #ff3b3b; font-weight: 600; }
+
+    .map-dash-mini {
+      height: 200px; border-radius: 10px; overflow: hidden;
+      border: 1px solid #2a2a2a; background: #111;
+      background-image:
+        linear-gradient(rgba(74,222,128,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(74,222,128,0.06) 1px, transparent 1px);
+      background-size: 30px 30px;
+      position: relative;
+    }
+    #miniMapCanvas { width: 100%; height: 100%; display: block; }
+
     .conn-pill {
       display: inline-block; padding: 3px 8px; border-radius: 12px;
       font-size: 11px; margin-left: 8px;
@@ -322,7 +387,7 @@
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="font-size: 56px;">🎯</div>
       <div class="h1">TagShot</div>
-      <div class="sub">Phase 3.1 · Host dashboard · v20260419_2244<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
+      <div class="sub">Phase 4 · Map + location · v20260419_2254<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
     </div>
 
     <button class="btn primary" id="toCreateBtn">🏠 Create Room</button>
@@ -378,6 +443,23 @@
       <div class="toggle-row">
         <div class="tl">Allow late-joining<br><span class="sub">Players can join after start.</span></div>
         <label class="switch"><input type="checkbox" id="lateJoinToggle" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="tl">Location tracking<br><span class="sub">Outdoor: map shows players. Indoor: disabled (unreliable GPS).</span></div>
+        <label class="switch"><input type="checkbox" id="locEnableToggle"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="tl">Enforce boundary<br><span class="sub">Players outside circle can't score. Requires location.</span></div>
+        <label class="switch"><input type="checkbox" id="geofenceToggle"><span class="slider"></span></label>
+      </div>
+
+      <div style="margin-top:12px;">
+        <label class="label">Location update rate</label>
+        <div class="seg" id="locRateSeg">
+          <button data-sec="3">3s</button>
+          <button data-sec="5" class="active">5s</button>
+          <button data-sec="10">10s</button>
+        </div>
       </div>
 
       <div style="margin-top:12px;">
@@ -455,6 +537,14 @@
         <div id="hostLeaderboard" class="lb-list"><div class="dash-empty">Waiting for players…</div></div>
       </div>
 
+      <div class="dash-panel" id="hostMapPanel" style="display:none;">
+        <div class="panel-title">Player positions (live)</div>
+        <div class="map-dash-mini">
+          <canvas id="miniMapCanvas"></canvas>
+        </div>
+        <div id="miniMapStatus" style="font-size:11px;color:#888;margin-top:6px;text-align:center;"></div>
+      </div>
+
       <div class="dash-panel">
         <div class="panel-title">Kill Feed — top 5 highlighted</div>
         <div id="killFeed" class="feed-list"><div class="dash-empty">No tags yet</div></div>
@@ -465,12 +555,33 @@
   <footer id="gameFooter" style="display:none;">
     <div class="btn-row footer-row">
       <button class="ctrl-btn primary" id="showQrBtn" style="display:none;">📱 My QR</button>
+      <button class="ctrl-btn" id="mapBtn" style="display:none;">🗺️ Map</button>
       <button class="ctrl-btn host" id="endGameBtn" style="display:none;">⏹ End</button>
       <button class="ctrl-btn host" id="extendBtn" style="display:none;">+5m</button>
       <button class="ctrl-btn danger" id="gameLeaveBtn">Leave</button>
     </div>
     <div class="status ok" id="status">Scanning…</div>
   </footer>
+
+  <div class="map-overlay" id="mapOverlay">
+    <div class="map-top">
+      <div>
+        <div class="mtl">🗺️ Player map</div>
+        <div class="mts" id="mapSubtitle">Waiting for GPS…</div>
+      </div>
+      <button class="map-close" id="mapCloseBtn">Close</button>
+    </div>
+    <div class="map-canvas-wrap">
+      <canvas id="mapCanvas"></canvas>
+    </div>
+    <div class="map-status" id="mapStatus">Acquiring your location…</div>
+    <div class="map-legend" id="mapLegend">
+      <span><span class="legend-dot me"></span>You</span>
+      <span><span class="legend-dot other"></span>Players</span>
+      <span><span class="legend-dot host"></span>Host</span>
+      <span id="legendFence" style="display:none;"><span class="legend-dot fence"></span>Boundary</span>
+    </div>
+  </div>
 
   <div class="screen" id="endScreen">
     <div style="text-align:center;margin-bottom:20px;">
@@ -534,6 +645,13 @@
     let dashSortBy = 'kills';
     let dashTopN = 0;
     let dashRepaintInterval = null;
+    let geoWatchId = null;
+    let locReportInterval = null;
+    let myCoords = null;
+    let mapVisible = false;
+    let geoFenceCenter = null;
+    let geoFenceRadius = 100;
+    let mapDrawTimer = null;
 
     const $ = id => document.getElementById(id);
     const showScreen = id => {
@@ -630,8 +748,9 @@
         durationMin: 10,
         allowLateJoin: true,
         hostPlays: true,
-        startedAt: null,
-        endsAt: null,
+        locEnabled: false,
+        geoFenceEnabled: false,
+        locUpdateSec: 5,
         createdAt: serverTimestamp()
       });
       await set(ref(db, `rooms/${code}/players/${myId}`), {
@@ -699,9 +818,21 @@
         const r = snap.val();
         roomData = r;
         players = r.players || {};
+
+        if (r.geoFenceCenter) {
+          geoFenceCenter = r.geoFenceCenter;
+          geoFenceRadius = r.geoFenceRadius || 100;
+        } else if (isHost && r.geoFenceEnabled && r.state === 'active' && myCoords && !r.geoFenceCenter) {
+          update(ref(db, `rooms/${roomCode}`), {
+            geoFenceCenter: { lat: myCoords.lat, lng: myCoords.lng },
+            geoFenceRadius: 100
+          }).catch(() => {});
+        }
+
         renderPlayerList();
         renderScoreboard();
         renderHostDashboard();
+        drawAllMaps();
         handleRoomState(r);
       });
 
@@ -873,12 +1004,25 @@
         $('gameFooter').style.display = 'none';
         $('videoContainer').style.display = 'none';
         $('specContainer').style.display = 'none';
+        stopLocationTracking();
       } else if (r.state === 'active') {
         if (document.querySelector('.screen:not(.hidden)')) {
           await enterGame(r);
         }
         updateTimer(r);
+        if (r.locEnabled) {
+          startLocationTracking(r.locUpdateSec || 5);
+          $('mapBtn').style.display = 'block';
+          $('hostMapPanel').style.display = isSpectator ? 'block' : 'none';
+          $('legendFence').style.display = r.geoFenceEnabled ? 'inline' : 'none';
+        } else {
+          stopLocationTracking();
+          $('mapBtn').style.display = 'none';
+          $('hostMapPanel').style.display = 'none';
+          if (mapVisible) { $('mapOverlay').classList.remove('active'); mapVisible = false; }
+        }
       } else if (r.state === 'ended') {
+        stopLocationTracking();
         showEndScreen(r);
       }
     }
@@ -899,6 +1043,22 @@
     $('lateJoinToggle').addEventListener('change', async e => {
       if (!isHost) return;
       await update(ref(db, `rooms/${roomCode}`), { allowLateJoin: e.target.checked });
+    });
+    $('locEnableToggle').addEventListener('change', async e => {
+      if (!isHost) return;
+      await update(ref(db, `rooms/${roomCode}`), { locEnabled: e.target.checked });
+    });
+    $('geofenceToggle').addEventListener('change', async e => {
+      if (!isHost) return;
+      await update(ref(db, `rooms/${roomCode}`), { geoFenceEnabled: e.target.checked });
+    });
+    document.querySelectorAll('#locRateSeg button').forEach(b => {
+      b.addEventListener('click', async () => {
+        if (!isHost) return;
+        document.querySelectorAll('#locRateSeg button').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        await update(ref(db, `rooms/${roomCode}`), { locUpdateSec: parseInt(b.dataset.sec) });
+      });
     });
 
     $('startGameBtn').addEventListener('click', async () => {
@@ -1066,6 +1226,7 @@
       if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
       if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
       if (dashRepaintInterval) { clearInterval(dashRepaintInterval); dashRepaintInterval = null; }
+      stopLocationTracking();
       roomCode = null; myId = null; roomPassword = null;
     }
     $('lobbyLeaveBtn').addEventListener('click', () => { if (confirm('Leave room?')) leaveRoom(); });
@@ -1118,6 +1279,13 @@
       if (roomData?.state !== 'active') {
         setStatus('Game not active', 'err');
         return;
+      }
+      if (roomData?.geoFenceEnabled && geoFenceCenter && myCoords) {
+        const dist = haversine(myCoords, geoFenceCenter);
+        if (dist !== null && dist > geoFenceRadius) {
+          setStatus(`Outside boundary (${Math.round(dist)}m) — move back`, 'err');
+          return;
+        }
       }
       if (!players[targetId] || players[targetId].isSpectator) {
         setStatus('Player not in game', 'err');
@@ -1201,6 +1369,210 @@
     });
 
     $('qrCloseBtn').addEventListener('click', () => $('qrModal').classList.remove('active'));
+
+    function startLocationTracking(updateSec) {
+      if (isSpectator) {
+        if (locReportInterval) clearInterval(locReportInterval);
+        locReportInterval = setInterval(() => {
+          if (roomData) drawAllMaps();
+        }, (updateSec || 5) * 1000);
+        drawAllMaps();
+        return;
+      }
+      if (!navigator.geolocation) {
+        showMapStatus('GPS not supported on this phone', 'err');
+        return;
+      }
+      if (geoWatchId !== null) return;
+
+      geoWatchId = navigator.geolocation.watchPosition(
+        pos => {
+          myCoords = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            acc: pos.coords.accuracy,
+            ts: Date.now()
+          };
+          showMapStatus(`GPS accuracy ±${Math.round(myCoords.acc)}m`, myCoords.acc < 30 ? '' : 'warn');
+        },
+        err => {
+          const msg = err.code === 1 ? 'Location permission denied' :
+                      err.code === 2 ? 'Position unavailable' :
+                      err.code === 3 ? 'Location request timed out' : 'GPS error';
+          showMapStatus(msg, 'err');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+
+      if (locReportInterval) clearInterval(locReportInterval);
+      locReportInterval = setInterval(() => {
+        if (myCoords && roomCode && myId) {
+          update(ref(db, `rooms/${roomCode}/players/${myId}/loc`), myCoords).catch(() => {});
+        }
+        drawAllMaps();
+      }, (updateSec || 5) * 1000);
+    }
+
+    function stopLocationTracking() {
+      if (geoWatchId !== null) {
+        try { navigator.geolocation.clearWatch(geoWatchId); } catch (e) {}
+        geoWatchId = null;
+      }
+      if (locReportInterval) { clearInterval(locReportInterval); locReportInterval = null; }
+      myCoords = null;
+    }
+
+    function showMapStatus(msg, cls) {
+      const el = $('mapStatus');
+      if (el) {
+        el.textContent = msg;
+        el.className = 'map-status' + (cls ? ' ' + cls : '');
+      }
+      const sub = $('mapSubtitle');
+      if (sub) sub.textContent = msg;
+    }
+
+    function haversine(a, b) {
+      if (!a || !b) return null;
+      const R = 6371000;
+      const toRad = d => d * Math.PI / 180;
+      const dLat = toRad(b.lat - a.lat);
+      const dLng = toRad(b.lng - a.lng);
+      const s = Math.sin(dLat/2)**2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng/2)**2;
+      return 2 * R * Math.asin(Math.sqrt(s));
+    }
+
+    function projectCoords(entries, canvasW, canvasH) {
+      const coords = entries.filter(e => e.loc && e.loc.lat).map(e => e.loc);
+      if (coords.length === 0) return null;
+      let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+      for (const c of coords) {
+        minLat = Math.min(minLat, c.lat);
+        maxLat = Math.max(maxLat, c.lat);
+        minLng = Math.min(minLng, c.lng);
+        maxLng = Math.max(maxLng, c.lng);
+      }
+      const pad = 0.00005;
+      minLat -= pad; maxLat += pad; minLng -= pad; maxLng += pad;
+      const latSpan = Math.max(maxLat - minLat, 0.0001);
+      const lngSpan = Math.max(maxLng - minLng, 0.0001);
+      const margin = 30;
+      const w = canvasW - margin * 2;
+      const h = canvasH - margin * 2;
+      return {
+        project: (lat, lng) => ({
+          x: margin + ((lng - minLng) / lngSpan) * w,
+          y: margin + ((maxLat - lat) / latSpan) * h
+        }),
+        bounds: { minLat, maxLat, minLng, maxLng }
+      };
+    }
+
+    function drawMap(canvas, showLabels) {
+      if (!canvas || !roomData) return;
+      const ctx = canvas.getContext('2d');
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+      const W = rect.width, H = rect.height;
+
+      ctx.clearRect(0, 0, W, H);
+
+      const entries = Object.entries(roomData.players || {})
+        .map(([id, p]) => ({ id, ...p }))
+        .filter(p => p.loc && p.loc.lat);
+
+      if (entries.length === 0) {
+        ctx.fillStyle = '#666';
+        ctx.font = '13px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText('No GPS data yet', W/2, H/2);
+        return;
+      }
+
+      const proj = projectCoords(entries, W, H);
+      if (!proj) return;
+
+      if (roomData.geoFenceEnabled && geoFenceCenter) {
+        const c = proj.project(geoFenceCenter.lat, geoFenceCenter.lng);
+        const edge = proj.project(geoFenceCenter.lat + geoFenceRadius/111000, geoFenceCenter.lng);
+        const pixelRadius = Math.abs(c.y - edge.y);
+        ctx.beginPath();
+        ctx.setLineDash([6, 4]);
+        ctx.strokeStyle = 'rgba(255,59,59,0.6)';
+        ctx.lineWidth = 2;
+        ctx.arc(c.x, c.y, pixelRadius, 0, 2*Math.PI);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      for (const p of entries) {
+        const pt = proj.project(p.loc.lat, p.loc.lng);
+        const isMe = p.id === myId;
+        const isHostDot = p.isHost;
+        const color = isMe ? '#4ade80' : (isHostDot ? '#fbbf24' : '#60a5fa');
+        const radius = isMe ? 10 : 7;
+
+        if (p.loc.acc && p.loc.acc > 0) {
+          const accRadius = Math.max(12, (p.loc.acc / 50) * 30);
+          ctx.beginPath();
+          ctx.fillStyle = color + '22';
+          ctx.arc(pt.x, pt.y, accRadius, 0, 2*Math.PI);
+          ctx.fill();
+        }
+
+        ctx.beginPath();
+        ctx.fillStyle = color;
+        ctx.arc(pt.x, pt.y, radius, 0, 2*Math.PI);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.strokeStyle = '#0a0a0a';
+        ctx.lineWidth = 2;
+        ctx.arc(pt.x, pt.y, radius, 0, 2*Math.PI);
+        ctx.stroke();
+
+        if (showLabels) {
+          ctx.fillStyle = '#fff';
+          ctx.font = '11px system-ui';
+          ctx.textAlign = 'center';
+          ctx.fillText((p.name || '?').slice(0, 12), pt.x, pt.y - radius - 6);
+          if (!isMe && myCoords && p.loc) {
+            const d = haversine(myCoords, p.loc);
+            if (d !== null) {
+              ctx.fillStyle = d < 10 ? '#ff3b3b' : (d < 30 ? '#fbbf24' : '#888');
+              ctx.font = '10px ui-monospace, monospace';
+              ctx.fillText(Math.round(d) + 'm', pt.x, pt.y + radius + 12);
+            }
+          }
+        }
+      }
+    }
+
+    function drawAllMaps() {
+      if (mapVisible) drawMap($('mapCanvas'), true);
+      if (isSpectator && $('hostMapPanel')?.style.display !== 'none') {
+        drawMap($('miniMapCanvas'), true);
+        const withLoc = Object.values(roomData?.players || {}).filter(p => p.loc && p.loc.lat).length;
+        const total = Object.values(roomData?.players || {}).filter(p => !p.isSpectator).length;
+        const el = $('miniMapStatus');
+        if (el) el.textContent = `${withLoc} of ${total} players reporting location`;
+      }
+    }
+
+    $('mapBtn').addEventListener('click', () => {
+      mapVisible = true;
+      $('mapOverlay').classList.add('active');
+      setTimeout(drawAllMaps, 50);
+    });
+    $('mapCloseBtn').addEventListener('click', () => {
+      mapVisible = false;
+      $('mapOverlay').classList.remove('active');
+    });
+
+    window.addEventListener('resize', () => { if (mapVisible || isSpectator) drawAllMaps(); });
 
     window.addEventListener('error', e => showDebug('JS: ' + (e.message || e.error || 'unknown')));
     window.addEventListener('unhandledrejection', e => showDebug('Promise: ' + (e.reason?.message || e.reason || 'unknown')));
