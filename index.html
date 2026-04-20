@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>TagShot — Phase 5A.8 (Scan diagnostic banner)</title>
+  <title>TagShot — Phase 5A.9 (Protection fix)</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; overscroll-behavior: none; }
@@ -635,7 +635,7 @@
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="font-size: 56px;">🎯</div>
       <div class="h1">TagShot</div>
-      <div class="sub">Phase 5A.8 · Scan diagnostic banner · v20260420_1536<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
+      <div class="sub">Phase 5A.9 · Protection fix · v20260420_1543<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
     </div>
 
     <button class="btn primary" id="toCreateBtn">🏠 Create Room</button>
@@ -2405,6 +2405,15 @@
         setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
         return;
       }
+      const targetProtectUntil = target.protectedUntil || 0;
+      if (targetProtectUntil > Date.now()) {
+        const remain = Math.ceil((targetProtectUntil - Date.now()) / 1000);
+        setStatus(`🛡 ${target.name} is protected — ${remain}s`, 'err');
+        scanDebugLog('BLOCK: target protected ' + remain + 's');
+        if (navigator.vibrate) navigator.vibrate(30);
+        setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
+        return;
+      }
       const w = getWeaponConfig(myWeapon);
       if (roomData?.weaponCooldowns && w?.cooldownMs > 0) {
         const lastFire = lastWeaponFire[myWeapon] || 0;
@@ -2758,10 +2767,13 @@
         const vSnap = await get(ref(db, `rooms/${roomCode}/players/${targetId}`));
         const meP = mySnap.val() || {};
         const victP = vSnap.val() || {};
-        const protectedUntil = victP.protectedUntil || 0;
+        const localProt = players[targetId]?.protectedUntil || 0;
+        const freshProt = victP.protectedUntil || 0;
+        const protectedUntil = Math.max(localProt, freshProt);
         if (protectedUntil > Date.now()) {
           const remain = Math.ceil((protectedUntil - Date.now()) / 1000);
-          setStatus(`${victimName} is protected (${remain}s)`, 'err');
+          setStatus(`🛡 ${victimName} is protected — ${remain}s`, 'err');
+          scanDebugLog('scoreHit BLOCK: protected ' + remain + 's');
           setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
           return;
         }
