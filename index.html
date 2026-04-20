@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>TagShot — Phase 5A.9 (Protection fix)</title>
+  <title>TagShot — Phase 5B.1 (Universal Arsenal QRs)</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; overscroll-behavior: none; }
@@ -635,7 +635,7 @@
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="font-size: 56px;">🎯</div>
       <div class="h1">TagShot</div>
-      <div class="sub">Phase 5A.9 · Protection fix · v20260420_1543<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
+      <div class="sub">Phase 5B.1 · Universal Arsenal QRs · v20260420_1605<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
     </div>
 
     <button class="btn primary" id="toCreateBtn">🏠 Create Room</button>
@@ -800,7 +800,20 @@
       </div>
 
       <div style="margin-top:12px;">
-        <button class="btn orange" id="arsenalPrintBtn">🖨️ Print Arsenal QR sheet</button>
+        <button class="btn orange" id="arsenalPrintBtn">🖨️ Print room Arsenal</button>
+      </div>
+
+      <div style="margin-top:10px;padding:10px;background:#1a1a1a;border-radius:8px;">
+        <div style="font-size:13px;font-weight:600;color:#22d3ee;margin-bottom:8px;">🌐 Universal Arsenal</div>
+        <div class="toggle-row">
+          <div class="tl">Allow universal QRs<br><span class="sub">Enables QRs that work across all your games.</span></div>
+          <label class="switch"><input type="checkbox" id="univAllowToggle"><span class="slider"></span></label>
+        </div>
+        <div id="univSettingsRow" style="display:none;">
+          <div style="font-size:12px;color:#aaa;margin:8px 0 4px;">Amount given per scan:</div>
+          <div id="univAmountsList"></div>
+          <button class="btn" id="arsenalUnivPrintBtn" style="margin-top:10px;background:#0891b2;border-color:#0891b2;">🌐 Print universal Arsenal</button>
+        </div>
       </div>
 
       <div class="toggle-row">
@@ -1035,6 +1048,7 @@
     const HIT_COOLDOWN_MS = 3000;
     const QR_PREFIX = "TAGSHOT::";
     const AMMO_QR_PREFIX = "TAGSHOT_AMMO::";
+    const UNIV_QR_PREFIX = "TAGSHOT_UNIV::";
     const ARSENAL_COOLDOWN_MS = 60000;
     const BASE_URL = location.origin + location.pathname;
     const TEAM_COLORS = ['#ef4444','#3b82f6','#10b981','#f59e0b','#a855f7','#ec4899','#14b8a6','#f97316','#06b6d4','#84cc16'];
@@ -1213,6 +1227,13 @@
         selfHealAllowed: false,
         teamModeSelfHealAllowed: false,
         reviveProtectSec: 60,
+        allowUniversalQr: false,
+        univPistolAmt: 3,
+        univShotgunAmt: 2,
+        univSniperAmt: 1,
+        univUziAmt: 5,
+        univMedicAmt: 1,
+        univSelfHealHp: 1,
         richSound: false,
         createdAt: serverTimestamp()
       });
@@ -1321,6 +1342,7 @@
         renderHostDashboard();
         renderTeamPanel();
         renderWeaponDamageList();
+        renderUnivAmountsList();
         updateHud();
         updateCantShootOverlay();
         drawAllMaps();
@@ -1401,6 +1423,10 @@
         document.querySelectorAll('#reviveProtectSeg button').forEach(b => {
           b.classList.toggle('active', parseInt(b.dataset.n) === r.reviveProtectSec);
         });
+      }
+      if (r.allowUniversalQr != null) {
+        $('univAllowToggle').checked = r.allowUniversalQr;
+        $('univSettingsRow').style.display = r.allowUniversalQr ? 'block' : 'none';
       }
       if (r.richSound != null) $('richSoundToggle').checked = r.richSound;
       if (r.locEnabled != null) $('locEnableToggle').checked = r.locEnabled;
@@ -1944,6 +1970,48 @@
     });
     $('arsenalPrintBtn').addEventListener('click', () => { if (roomCode) openArsenalSheet(); });
     $('arsenalInGameBtn').addEventListener('click', () => { if (roomCode) openArsenalSheet(); });
+    $('arsenalUnivPrintBtn').addEventListener('click', () => openUniversalArsenalSheet());
+
+    $('univAllowToggle').addEventListener('change', async e => {
+      if (!isHost) return;
+      await update(ref(db, `rooms/${roomCode}`), { allowUniversalQr: e.target.checked });
+      $('univSettingsRow').style.display = e.target.checked ? 'block' : 'none';
+    });
+
+    function renderUnivAmountsList() {
+      const el = $('univAmountsList');
+      if (!el || !isHost) return;
+      const rows = [
+        { key: 'pistol',   icon: '🔫', name: 'Pistol',   field: 'univPistolAmt',   min: 1, max: 20, def: 3 },
+        { key: 'shotgun',  icon: '💥', name: 'Shotgun',  field: 'univShotgunAmt',  min: 1, max: 20, def: 2 },
+        { key: 'sniper',   icon: '🎯', name: 'Sniper',   field: 'univSniperAmt',   min: 1, max: 20, def: 1 },
+        { key: 'uzi',      icon: '⚡', name: 'Uzi',      field: 'univUziAmt',      min: 1, max: 20, def: 5 },
+        { key: 'medic',    icon: '✚',  name: 'Medic',    field: 'univMedicAmt',    min: 1, max: 10, def: 1 },
+        { key: 'selfheal', icon: '➕', name: 'Self-Heal HP', field: 'univSelfHealHp', min: 1, max: 5,  def: 1 }
+      ];
+      el.innerHTML = rows.map(r => {
+        const cur = roomData?.[r.field] ?? r.def;
+        return `<div style="display:flex;align-items:center;gap:10px;padding:4px 0;">
+          <span style="font-size:16px;min-width:24px;">${r.icon}</span>
+          <span style="flex:1;font-size:12px;">${r.name}</span>
+          <input type="range" min="${r.min}" max="${r.max}" step="1" value="${cur}" data-univ-field="${r.field}" class="univ-amt-input" style="flex:2;">
+          <span data-univ-val="${r.field}" style="font-family:monospace;color:#22d3ee;min-width:24px;text-align:right;font-weight:600;font-size:12px;">${cur}</span>
+        </div>`;
+      }).join('');
+      el.querySelectorAll('.univ-amt-input').forEach(inp => {
+        inp.addEventListener('input', e => {
+          const f = e.target.dataset.univField;
+          const v = parseInt(e.target.value);
+          el.querySelector(`[data-univ-val="${f}"]`).textContent = v;
+        });
+        inp.addEventListener('change', async e => {
+          if (!isHost) return;
+          const f = e.target.dataset.univField;
+          const v = parseInt(e.target.value);
+          await update(ref(db, `rooms/${roomCode}`), { [f]: v });
+        });
+      });
+    }
 
     $('teamPanelToggle').addEventListener('click', () => {
       teamPanelVisible = !teamPanelVisible;
@@ -2326,6 +2394,11 @@
       lastScanRaw = raw; lastScanTime = now;
       scanDebugLog('SCAN: ' + raw.slice(0, 50));
 
+      if (raw.startsWith(UNIV_QR_PREFIX)) {
+        scanDebugLog('→ Universal Arsenal path');
+        handleUniversalScan(raw);
+        return;
+      }
       if (raw.startsWith(AMMO_QR_PREFIX)) {
         scanDebugLog('→ Arsenal QR path');
         handleAmmoScan(raw);
@@ -2530,6 +2603,35 @@
       el.classList.add('active');
       if (healPreviewTimer) clearTimeout(healPreviewTimer);
       healPreviewTimer = setTimeout(() => el.classList.remove('active'), 1500);
+    }
+
+    async function handleUniversalScan(raw) {
+      if (!roomData?.allowUniversalQr) {
+        setStatus('Universal QRs disabled by host', 'err');
+        scanDebugLog('BLOCK: universal QR not allowed in this room');
+        setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
+        return;
+      }
+      const weaponType = raw.slice(UNIV_QR_PREFIX.length).trim().toLowerCase();
+      if (!WEAPONS[weaponType]) {
+        setStatus('Unknown universal QR type', 'err');
+        scanDebugLog('BLOCK: unknown univ weapon ' + weaponType);
+        return;
+      }
+      let amount;
+      switch (weaponType) {
+        case 'pistol':   amount = roomData.univPistolAmt ?? 3; break;
+        case 'shotgun':  amount = roomData.univShotgunAmt ?? 2; break;
+        case 'sniper':   amount = roomData.univSniperAmt ?? 1; break;
+        case 'uzi':      amount = roomData.univUziAmt ?? 5; break;
+        case 'medic':    amount = roomData.univMedicAmt ?? 1; break;
+        case 'selfheal': amount = roomData.univSelfHealHp ?? 1; break;
+        default: amount = 1;
+      }
+      const arsenalId = 'univ_' + weaponType;
+      const syntheticPayload = `TAGSHOT_AMMO::${roomCode}:${arsenalId}:${weaponType}:${amount}`;
+      scanDebugLog('Universal → synthetic: ' + weaponType + ' x' + amount);
+      handleAmmoScan(syntheticPayload);
     }
 
     async function handleAmmoScan(raw) {
@@ -3305,6 +3407,58 @@
         beep(660, 60, 'sine');
       }
     });
+
+    function openUniversalArsenalSheet() {
+      const sections = [
+        { key: 'pistol',   icon: '🔫', name: 'Pistol',   color: '#fbbf24', hint: 'Pistol ammo (amount set by host)' },
+        { key: 'shotgun',  icon: '💥', name: 'Shotgun',  color: '#f97316', hint: 'Shotgun ammo (amount set by host)' },
+        { key: 'sniper',   icon: '🎯', name: 'Sniper',   color: '#a855f7', hint: 'Sniper ammo (amount set by host)' },
+        { key: 'uzi',      icon: '⚡', name: 'Uzi',      color: '#06b6d4', hint: 'Uzi ammo (amount set by host)' },
+        { key: 'medic',    icon: '✚',  name: 'Medic kit', color: '#4ade80', hint: 'Medic charges (amount set by host)' },
+        { key: 'selfheal', icon: '➕', name: 'Self-Heal', color: '#4ade80', hint: 'HP restored (amount set by host)' }
+      ];
+
+      const cardsHtml = sections.map(s => {
+        const payload = `TAGSHOT_UNIV::${s.key}`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=520x520&margin=8&data=${encodeURIComponent(payload)}`;
+        return `<div class="card" style="border-color:${s.color};">
+          <h2 style="color:${s.color};">${s.icon} ${s.name}</h2>
+          <div class="amt" style="font-size:14px;color:#0891b2;">UNIVERSAL</div>
+          <img src="${qrUrl}" alt="${s.name} QR" />
+          <div class="hint">${s.hint}</div>
+          <div class="code">univ_${s.key}</div>
+        </div>`;
+      }).join('');
+
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>TagShot Universal Arsenal</title>
+<style>
+body { font-family: system-ui, sans-serif; background: white; color: black; padding: 20px; margin: 0; }
+h1 { font-size: 20px; margin-bottom: 6px; }
+.sub { color: #666; font-size: 13px; margin-bottom: 20px; }
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.card { border: 3px dashed #0891b2; border-radius: 12px; padding: 14px; text-align: center; break-inside: avoid; page-break-inside: avoid; }
+.card h2 { font-size: 17px; margin-bottom: 4px; }
+.card .amt { font-size: 14px; font-weight: 800; color: #0891b2; margin: 4px 0 10px; letter-spacing: 1px; }
+.card img { width: 100%; max-width: 220px; height: auto; }
+.card .hint { font-size: 11px; color: #888; margin-top: 6px; }
+.card .code { font-size: 9px; color: #aaa; font-family: monospace; margin-top: 2px; }
+.noprint { margin-top: 30px; padding: 14px; background: #f3f4f6; border-radius: 8px; font-size: 13px; }
+@media print { .noprint { display: none; } body { padding: 10px; } .grid { gap: 10px; } }
+</style></head>
+<body>
+<div class="noprint" style="margin-bottom:20px;">
+<strong>🌐 Universal Arsenal:</strong> These QRs work in any room where the host has enabled "Allow universal QRs". The amount given per scan is set by the host in their lobby. Print once, reuse across games.
+<br><br><button onclick="window.print()" style="padding:10px 20px;font-size:15px;">🖨️ Print</button>
+</div>
+<h1 style="color:#0891b2;">🌐 TagShot Universal Arsenal</h1>
+<div class="sub">One card per weapon type. Works across all games (if host allows). 60s cooldown per QR per player.</div>
+<div class="grid">${cardsHtml}</div>
+</body></html>`;
+
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    }
 
     function openArsenalSheet() {
       if (!roomCode) return;
