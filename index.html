@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>TagShot — Phase 5A (Teams + Ammo + Aim)</title>
+  <title>TagShot — Phase 5A.2 (Weapons + Medic + HP)</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; overscroll-behavior: none; }
@@ -392,28 +392,52 @@
     }
     .aim-hint.active { opacity: 1; }
 
+    .weapon-hud {
+      position: absolute; bottom: 14px; left: 14px;
+      background: rgba(0,0,0,0.8); padding: 8px 14px;
+      border-radius: 10px; z-index: 7;
+      display: flex; align-items: center; gap: 10px;
+      border: 1px solid rgba(255,255,255,0.1);
+      min-width: 130px;
+    }
+    .weapon-hud .weapon-icon { font-size: 22px; line-height: 1; }
+    .weapon-hud .weapon-info { display: flex; flex-direction: column; gap: 2px; }
+    .weapon-hud .weapon-name { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
+    .weapon-hud .weapon-ammo { font-size: 20px; font-weight: 700; font-family: ui-monospace, monospace; color: #fbbf24; line-height: 1; }
+    .weapon-hud.none .weapon-ammo { color: #666; }
+    .weapon-hud.low .weapon-ammo { color: #ff3b3b; animation: ammoPulse 0.8s infinite; }
+    .weapon-hud.zero .weapon-ammo { color: #ff3b3b; }
+    .weapon-hud.medic { border-color: #4ade80; }
+    .weapon-hud.medic .weapon-ammo { color: #4ade80; }
+
+    .hp-hud {
+      position: absolute; bottom: 14px; right: 14px;
+      background: rgba(0,0,0,0.8); padding: 8px 12px;
+      border-radius: 10px; z-index: 7;
+      display: flex; align-items: center; gap: 4px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .hp-hud .hp-heart { font-size: 18px; line-height: 1; }
+    .hp-hud .hp-heart.dim { opacity: 0.25; filter: grayscale(1); }
+    .hp-hud .hp-dead { font-size: 22px; color: #888; }
+
     .ammo-hud {
       position: absolute; bottom: 14px; left: 14px;
       background: rgba(0,0,0,0.75); padding: 8px 14px;
       border-radius: 10px; z-index: 7;
-      display: flex; align-items: center; gap: 10px;
+      display: none; align-items: center; gap: 10px;
       border: 1px solid rgba(255,255,255,0.1);
     }
-    .ammo-hud .ammo-icon { font-size: 20px; }
-    .ammo-hud .ammo-count { font-size: 22px; font-weight: 700; font-family: ui-monospace, monospace; color: #fbbf24; }
-    .ammo-hud .ammo-count.low { color: #ff3b3b; animation: ammoPulse 0.8s infinite; }
-    .ammo-hud .ammo-count.zero { color: #ff3b3b; }
-    @keyframes ammoPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 
     .health-hud {
       position: absolute; bottom: 14px; right: 14px;
       background: rgba(0,0,0,0.75); padding: 8px 14px;
       border-radius: 10px; z-index: 7;
-      display: flex; align-items: center; gap: 10px;
+      display: none; align-items: center; gap: 10px;
       border: 1px solid rgba(255,255,255,0.1);
     }
-    .health-hud .hp-icon { font-size: 18px; }
-    .health-hud .hp-count { font-size: 18px; font-weight: 700; color: #ff3b3b; }
+
+    @keyframes ammoPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 
     .sound-toggle {
       position: absolute; top: 14px; right: 14px;
@@ -492,7 +516,7 @@
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="font-size: 56px;">🎯</div>
       <div class="h1">TagShot</div>
-      <div class="sub">Phase 5A · Teams + Ammo + Aim · v20260420_0937<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
+      <div class="sub">Phase 5A.2 · Weapons + Medic + HP · v20260420_1038<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
     </div>
 
     <button class="btn primary" id="toCreateBtn">🏠 Create Room</button>
@@ -575,16 +599,54 @@
         <button class="btn" id="rerollTeamsBtn" style="margin-top:8px;font-size:13px;padding:10px;">🎲 Re-roll auto teams</button>
       </div>
 
-      <div style="margin-top:12px;">
-        <label class="label">Starting ammo <span id="startAmmoVal" style="color:#fbbf24;font-family:monospace;">3</span></label>
+      <div style="margin-top:12px;padding:10px;background:#1a1a1a;border-radius:8px;">
+        <div style="font-size:13px;font-weight:600;color:#fbbf24;margin-bottom:8px;">⚔️ Weapon system</div>
+
+        <label class="label">Start with weapon</label>
+        <div class="seg" id="startWeaponSeg">
+          <button data-start="pistol" class="active">Pistol ready</button>
+          <button data-start="none">Scavenger (no weapon)</button>
+        </div>
+
+        <label class="label" style="margin-top:10px;">Starting ammo (if Pistol start) <span id="startAmmoVal" style="color:#fbbf24;font-family:monospace;">3</span></label>
         <input type="range" id="startAmmoRange" min="0" max="20" step="1" value="3" style="width:100%;">
-        <div style="font-size:11px;color:#666;margin-top:4px;">Players must scan Arsenal QRs to reload.</div>
+
+        <div class="toggle-row">
+          <div class="tl">Per-weapon cooldowns<br><span class="sub">Sniper 5s, Shotgun 2s between shots.</span></div>
+          <label class="switch"><input type="checkbox" id="weaponCooldownsToggle" checked><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row" style="border-bottom:none;">
+          <div class="tl">Lose weapon on death<br><span class="sub">If off, keep weapon and ammo after revive.</span></div>
+          <label class="switch"><input type="checkbox" id="loseWeaponToggle" checked><span class="slider"></span></label>
+        </div>
       </div>
 
-      <div class="toggle-row">
-        <div class="tl">Health / elimination<br><span class="sub">Players have 1 HP, eliminated after tag.</span></div>
-        <label class="switch"><input type="checkbox" id="healthToggle"><span class="slider"></span></label>
+      <div style="margin-top:10px;padding:10px;background:#1a1a1a;border-radius:8px;">
+        <div style="font-size:13px;font-weight:600;color:#ff3b3b;margin-bottom:8px;">❤️ Health system</div>
+        <div class="toggle-row">
+          <div class="tl">Enable health / elimination<br><span class="sub">Off = any hit eliminates (simple).</span></div>
+          <label class="switch"><input type="checkbox" id="healthToggle"><span class="slider"></span></label>
+        </div>
+        <div id="healthDetailRow" style="display:none;">
+          <label class="label">Starting HP <span id="startHpVal" style="color:#ff3b3b;font-family:monospace;">3</span></label>
+          <input type="range" id="startHpRange" min="1" max="10" step="1" value="3" style="width:100%;">
+        </div>
       </div>
+
+      <div style="margin-top:10px;padding:10px;background:#1a1a1a;border-radius:8px;">
+        <div style="font-size:13px;font-weight:600;color:#4ade80;margin-bottom:8px;">✚ Medic system (teams only)</div>
+        <label class="label">Score per heal</label>
+        <div class="seg" id="healScoreSeg">
+          <button data-n="0">0 pt</button>
+          <button data-n="1" class="active">+1 pt</button>
+          <button data-n="2">+2 pt</button>
+        </div>
+        <div class="toggle-row" style="border-bottom:none;">
+          <div class="tl">Allow eliminated self-heal<br><span class="sub">Dead players can scan Self-Heal QRs to revive.</span></div>
+          <label class="switch"><input type="checkbox" id="selfHealToggle"><span class="slider"></span></label>
+        </div>
+      </div>
+
       <div class="toggle-row">
         <div class="tl">Rich sound pack<br><span class="sub">Better effects (optional, more data).</span></div>
         <label class="switch"><input type="checkbox" id="richSoundToggle"><span class="slider"></span></label>
@@ -670,13 +732,15 @@
     <div class="flash" id="flash"></div>
     <div class="hit-toast" id="hitToast"></div>
     <button class="sound-toggle" id="soundToggle">🔊</button>
-    <div class="ammo-hud" id="ammoHud" style="display:none;">
-      <span class="ammo-icon">🔫</span>
-      <span class="ammo-count" id="ammoCount">0</span>
+    <div class="weapon-hud none" id="weaponHud">
+      <span class="weapon-icon" id="weaponIcon">👐</span>
+      <div class="weapon-info">
+        <span class="weapon-name" id="weaponName">None</span>
+        <span class="weapon-ammo" id="weaponAmmo">–</span>
+      </div>
     </div>
-    <div class="health-hud" id="healthHud" style="display:none;">
-      <span class="hp-icon">❤️</span>
-      <span class="hp-count" id="hpCount">1</span>
+    <div class="hp-hud" id="hpHud" style="display:none;">
+      <span id="hpHearts"></span>
     </div>
   </div>
 
@@ -805,6 +869,15 @@
     const TEAM_COLORS = ['#ef4444','#3b82f6','#10b981','#f59e0b','#a855f7','#ec4899','#14b8a6','#f97316','#06b6d4','#84cc16'];
     const TEAM_NAMES = ['Red','Blue','Green','Amber','Purple','Pink','Teal','Orange','Cyan','Lime'];
 
+    const WEAPONS = {
+      pistol:  { icon: '🔫', name: 'Pistol',  damage: 1, cooldownMs: 0,    type: 'attack', color: '#fbbf24' },
+      shotgun: { icon: '💥', name: 'Shotgun', damage: 2, cooldownMs: 2000, type: 'attack', color: '#f97316' },
+      sniper:  { icon: '🎯', name: 'Sniper',  damage: 3, cooldownMs: 5000, type: 'attack', color: '#a855f7' },
+      uzi:     { icon: '⚡', name: 'Uzi',     damage: 1, cooldownMs: 0,    type: 'attack', color: '#06b6d4' },
+      medic:   { icon: '✚', name: 'Medic',   damage: 0, cooldownMs: 0,    type: 'heal',   color: '#4ade80' },
+      selfheal:{ icon: '➕', name: 'Self-Heal', damage: 0, cooldownMs: 0, type: 'selfheal', color: '#4ade80' }
+    };
+
     let roomCode = null;
     let roomPassword = null;
     let myId = null;
@@ -833,6 +906,8 @@
     let myAmmo = 0;
     let myHealth = 1;
     let myTeam = -1;
+    let myWeapon = null;
+    let lastWeaponFire = {};
     let lastArsenalScans = {};
     let soundEnabled = true;
     let audioCtx = null;
@@ -941,13 +1016,21 @@
         teamCount: 0,
         teamMode: 'auto',
         startingAmmo: 3,
+        startWeapon: 'pistol',
+        weaponCooldowns: true,
+        loseWeaponOnDeath: true,
         healthEnabled: false,
+        startingHp: 3,
+        healScore: 1,
+        selfHealAllowed: false,
         richSound: false,
         createdAt: serverTimestamp()
       });
       await set(ref(db, `rooms/${code}/players/${myId}`), {
-        name: myName, score: 0, deaths: 0, isHost: true, isSpectator: false,
-        team: -1, ammo: 0, health: 1, alive: true,
+        name: myName, score: 0, deaths: 0, heals: 0,
+        isHost: true, isSpectator: false,
+        team: -1, weapon: 'pistol', ammo: 0,
+        health: 1, maxHealth: 1, alive: true,
         joinedAt: serverTimestamp()
       });
       onDisconnect(ref(db, `rooms/${code}/players/${myId}`)).remove();
@@ -976,8 +1059,10 @@
       isSpectator = false;
 
       await set(ref(db, `rooms/${code}/players/${myId}`), {
-        name: myName, score: 0, deaths: 0, isHost: false, isSpectator: false,
-        team: -1, ammo: 0, health: 1, alive: true,
+        name: myName, score: 0, deaths: 0, heals: 0,
+        isHost: false, isSpectator: false,
+        team: -1, weapon: 'pistol', ammo: 0,
+        health: 1, maxHealth: 1, alive: true,
         joinedAt: serverTimestamp()
       });
       onDisconnect(ref(db, `rooms/${code}/players/${myId}`)).remove();
@@ -1030,6 +1115,7 @@
           myAmmo = players[myId].ammo || 0;
           myHealth = players[myId].health || 0;
           myTeam = players[myId].team != null ? players[myId].team : -1;
+          myWeapon = players[myId].weapon || null;
         }
 
         renderPlayerList();
@@ -1077,7 +1163,27 @@
         $('startAmmoRange').value = r.startingAmmo;
         $('startAmmoVal').textContent = r.startingAmmo;
       }
-      if (r.healthEnabled != null) $('healthToggle').checked = r.healthEnabled;
+      if (r.startWeapon) {
+        document.querySelectorAll('#startWeaponSeg button').forEach(b => {
+          b.classList.toggle('active', b.dataset.start === r.startWeapon);
+        });
+      }
+      if (r.weaponCooldowns != null) $('weaponCooldownsToggle').checked = r.weaponCooldowns;
+      if (r.loseWeaponOnDeath != null) $('loseWeaponToggle').checked = r.loseWeaponOnDeath;
+      if (r.healthEnabled != null) {
+        $('healthToggle').checked = r.healthEnabled;
+        $('healthDetailRow').style.display = r.healthEnabled ? 'block' : 'none';
+      }
+      if (r.startingHp != null) {
+        $('startHpRange').value = r.startingHp;
+        $('startHpVal').textContent = r.startingHp;
+      }
+      if (r.healScore != null) {
+        document.querySelectorAll('#healScoreSeg button').forEach(b => {
+          b.classList.toggle('active', parseInt(b.dataset.n) === r.healScore);
+        });
+      }
+      if (r.selfHealAllowed != null) $('selfHealToggle').checked = r.selfHealAllowed;
       if (r.richSound != null) $('richSoundToggle').checked = r.richSound;
       if (r.locEnabled != null) $('locEnableToggle').checked = r.locEnabled;
       if (r.geoFenceEnabled != null) $('geofenceToggle').checked = r.geoFenceEnabled;
@@ -1235,7 +1341,9 @@
             ? `<span class="team-badge team-${pFull.team}">${TEAM_NAMES[pFull.team]}</span>`
             : '';
           const eliminated = roomData?.healthEnabled && pFull.alive === false ? ' <span style="color:#666;font-size:11px;">💀 out</span>' : '';
-          const ammoInfo = `<span style="color:#fbbf24;font-size:11px;">🔫${pFull.ammo || 0}</span>`;
+          const wpn = pFull.weapon ? (WEAPONS[pFull.weapon]?.icon || '?') : '👐';
+          const hpStr = roomData?.healthEnabled ? ` ${pFull.health ?? 0}/${pFull.maxHealth ?? 1}❤` : '';
+          const ammoInfo = `<span style="color:#fbbf24;font-size:11px;">${wpn}${pFull.ammo || 0}</span>`;
           return `<div class="lb-item ${rankClass}">
             <div class="rank">${medal}</div>
             <div class="name">${escapeHtml(p.name)}${teamBadge}${eliminated}${lastInfo}</div>
@@ -1243,6 +1351,7 @@
               <span class="k">⚔${p.kills}</span>
               <span class="d">💥${p.deaths}</span>
               ${ammoInfo}
+              ${hpStr ? `<span style="color:#ff9999;font-size:11px;">${hpStr}</span>` : ''}
             </div>
           </div>`;
         }).join('');
@@ -1259,10 +1368,13 @@
       } else {
         feedEl.innerHTML = feedArr.map((h, i) => {
           const highlight = i < 5 ? ` recent recent-${i+1}` : '';
-          return `<div class="feed-item${highlight}">
+          const isHeal = h.type === 'heal';
+          const verb = isHeal ? 'healed' : (h.damage > 1 ? `tagged (${h.damage} dmg)` : 'tagged');
+          const icon = isHeal ? '✚' : (h.weapon && WEAPONS[h.weapon]?.icon) || '🎯';
+          return `<div class="feed-item${highlight}" ${isHeal ? 'style="border-left-color:#4ade80;"' : ''}>
             <div class="feed-text">
-              <span class="shooter">${escapeHtml(h.shooterName)}</span>
-              → tagged →
+              <span class="shooter">${icon} ${escapeHtml(h.shooterName)}</span>
+              → ${verb} →
               <span class="victim">${escapeHtml(h.victimName)}</span>
             </div>
             <div class="feed-time">${fmtClockTime(h.timestamp)}</div>
@@ -1392,9 +1504,45 @@
       if (!isHost) return;
       await update(ref(db, `rooms/${roomCode}`), { startingAmmo: parseInt(e.target.value) });
     });
+    document.querySelectorAll('#startWeaponSeg button').forEach(b => {
+      b.addEventListener('click', async () => {
+        if (!isHost) return;
+        document.querySelectorAll('#startWeaponSeg button').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        await update(ref(db, `rooms/${roomCode}`), { startWeapon: b.dataset.start });
+      });
+    });
+    $('weaponCooldownsToggle').addEventListener('change', async e => {
+      if (!isHost) return;
+      await update(ref(db, `rooms/${roomCode}`), { weaponCooldowns: e.target.checked });
+    });
+    $('loseWeaponToggle').addEventListener('change', async e => {
+      if (!isHost) return;
+      await update(ref(db, `rooms/${roomCode}`), { loseWeaponOnDeath: e.target.checked });
+    });
     $('healthToggle').addEventListener('change', async e => {
       if (!isHost) return;
       await update(ref(db, `rooms/${roomCode}`), { healthEnabled: e.target.checked });
+      $('healthDetailRow').style.display = e.target.checked ? 'block' : 'none';
+    });
+    $('startHpRange').addEventListener('input', e => {
+      $('startHpVal').textContent = e.target.value;
+    });
+    $('startHpRange').addEventListener('change', async e => {
+      if (!isHost) return;
+      await update(ref(db, `rooms/${roomCode}`), { startingHp: parseInt(e.target.value) });
+    });
+    document.querySelectorAll('#healScoreSeg button').forEach(b => {
+      b.addEventListener('click', async () => {
+        if (!isHost) return;
+        document.querySelectorAll('#healScoreSeg button').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        await update(ref(db, `rooms/${roomCode}`), { healScore: parseInt(b.dataset.n) });
+      });
+    });
+    $('selfHealToggle').addEventListener('change', async e => {
+      if (!isHost) return;
+      await update(ref(db, `rooms/${roomCode}`), { selfHealAllowed: e.target.checked });
     });
     $('richSoundToggle').addEventListener('change', async e => {
       if (!isHost) return;
@@ -1413,13 +1561,20 @@
         durationMin: durMin
       });
       const startingAmmo = roomData?.startingAmmo ?? 3;
+      const startWeapon = roomData?.startWeapon || 'pistol';
       const healthEnabled = roomData?.healthEnabled === true;
+      const startingHp = healthEnabled ? (roomData?.startingHp ?? 3) : 1;
       const resetUpdates = {};
       for (const id of Object.keys(players)) {
+        const initWeapon = startWeapon === 'none' ? null : 'pistol';
+        const initAmmo = startWeapon === 'none' ? 0 : startingAmmo;
         resetUpdates[`rooms/${roomCode}/players/${id}/score`] = 0;
         resetUpdates[`rooms/${roomCode}/players/${id}/deaths`] = 0;
-        resetUpdates[`rooms/${roomCode}/players/${id}/ammo`] = startingAmmo;
-        resetUpdates[`rooms/${roomCode}/players/${id}/health`] = healthEnabled ? 1 : 1;
+        resetUpdates[`rooms/${roomCode}/players/${id}/heals`] = 0;
+        resetUpdates[`rooms/${roomCode}/players/${id}/weapon`] = initWeapon;
+        resetUpdates[`rooms/${roomCode}/players/${id}/ammo`] = initAmmo;
+        resetUpdates[`rooms/${roomCode}/players/${id}/health`] = startingHp;
+        resetUpdates[`rooms/${roomCode}/players/${id}/maxHealth`] = startingHp;
         resetUpdates[`rooms/${roomCode}/players/${id}/alive`] = true;
       }
       resetUpdates[`rooms/${roomCode}/hits`] = null;
@@ -1443,8 +1598,8 @@
         $('videoContainer').style.display = 'none';
         $('specContainer').style.display = 'flex';
         $('showQrBtn').style.display = 'none';
-        $('ammoHud').style.display = 'none';
-        $('healthHud').style.display = 'none';
+        $('weaponHud').style.display = 'none';
+        $('hpHud').style.display = 'none';
         renderHostDashboard();
         if (dashRepaintInterval) clearInterval(dashRepaintInterval);
         dashRepaintInterval = setInterval(renderHostDashboard, 2000);
@@ -1452,8 +1607,8 @@
         $('specContainer').style.display = 'none';
         $('videoContainer').style.display = 'block';
         $('showQrBtn').style.display = 'block';
-        $('ammoHud').style.display = 'flex';
-        $('healthHud').style.display = r.healthEnabled ? 'flex' : 'none';
+        $('weaponHud').style.display = 'flex';
+        $('hpHud').style.display = r.healthEnabled ? 'flex' : 'none';
         if (!mediaStream) {
           try {
             mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -1585,12 +1740,20 @@
     $('newRoundBtn').addEventListener('click', async () => {
       if (!isHost) return;
       const startingAmmo = roomData?.startingAmmo ?? 3;
+      const startWeapon = roomData?.startWeapon || 'pistol';
+      const healthEnabled = roomData?.healthEnabled === true;
+      const startingHp = healthEnabled ? (roomData?.startingHp ?? 3) : 1;
       const resetUpdates = {};
       for (const id of Object.keys(players)) {
+        const initWeapon = startWeapon === 'none' ? null : 'pistol';
+        const initAmmo = startWeapon === 'none' ? 0 : startingAmmo;
         resetUpdates[`rooms/${roomCode}/players/${id}/score`] = 0;
         resetUpdates[`rooms/${roomCode}/players/${id}/deaths`] = 0;
-        resetUpdates[`rooms/${roomCode}/players/${id}/ammo`] = startingAmmo;
-        resetUpdates[`rooms/${roomCode}/players/${id}/health`] = 1;
+        resetUpdates[`rooms/${roomCode}/players/${id}/heals`] = 0;
+        resetUpdates[`rooms/${roomCode}/players/${id}/weapon`] = initWeapon;
+        resetUpdates[`rooms/${roomCode}/players/${id}/ammo`] = initAmmo;
+        resetUpdates[`rooms/${roomCode}/players/${id}/health`] = startingHp;
+        resetUpdates[`rooms/${roomCode}/players/${id}/maxHealth`] = startingHp;
         resetUpdates[`rooms/${roomCode}/players/${id}/alive`] = true;
       }
       resetUpdates[`rooms/${roomCode}/hits`] = null;
@@ -1730,14 +1893,10 @@
         setStatus('Game not active', 'err');
         return;
       }
-      if (roomData?.healthEnabled && players[myId] && players[myId].alive === false) {
-        setStatus('You are eliminated!', 'err');
-        return;
-      }
-      if (myAmmo <= 0) {
-        setStatus('Out of ammo! Scan an Arsenal QR', 'err');
-        playSound('empty');
-        setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
+      const meP = players[myId] || {};
+      if (roomData?.healthEnabled && meP.alive === false) {
+        if (roomData?.selfHealAllowed) setStatus('Eliminated — find a Self-Heal QR', 'err');
+        else setStatus('Eliminated — wait for a medic', 'err');
         return;
       }
       if (roomData?.geoFenceEnabled && geoFenceCenter && myCoords) {
@@ -1747,29 +1906,127 @@
           return;
         }
       }
-      if (!players[targetId] || players[targetId].isSpectator) {
+      const target = players[targetId];
+      if (!target || target.isSpectator) {
         setStatus('Player not in game', 'err');
         setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
         return;
       }
-      if (roomData?.teamCount > 0 && players[targetId].team === myTeam && myTeam >= 0) {
-        setStatus(`${players[targetId].name} is on your team!`, 'err');
+
+      if (myWeapon === 'medic') {
+        handleMedicHeal(targetId);
+        return;
+      }
+
+      if (!myWeapon) {
+        setStatus('No weapon! Find an Arsenal QR', 'err');
+        playSound('empty');
         setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
         return;
       }
-      if (roomData?.healthEnabled && players[targetId].alive === false) {
-        setStatus(`${players[targetId].name} is already eliminated`, 'err');
+      if (myAmmo <= 0) {
+        setStatus('Out of ammo! Scan an Arsenal QR', 'err');
+        playSound('empty');
         setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
         return;
       }
-      const lastHit = lastHitTargets[targetId] || 0;
-      if ((now - lastHit) < HIT_COOLDOWN_MS) {
-        const wait = Math.ceil((HIT_COOLDOWN_MS - (now - lastHit)) / 1000);
-        setStatus(`Cooldown ${players[targetId].name} — ${wait}s`, 'err');
+      if (roomData?.teamCount > 0 && target.team === myTeam && myTeam >= 0) {
+        setStatus(`${target.name} is on your team!`, 'err');
+        setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
         return;
       }
-      lastHitTargets[targetId] = now;
+      if (roomData?.healthEnabled && target.alive === false) {
+        setStatus(`${target.name} is already eliminated`, 'err');
+        setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
+        return;
+      }
+      const w = WEAPONS[myWeapon];
+      if (roomData?.weaponCooldowns && w?.cooldownMs > 0) {
+        const lastFire = lastWeaponFire[myWeapon] || 0;
+        if ((now - lastFire) < w.cooldownMs) {
+          const wait = Math.ceil((w.cooldownMs - (now - lastFire)) / 1000);
+          setStatus(`${w.name} recharging… ${wait}s`, 'err');
+          return;
+        }
+      }
+      lastWeaponFire[myWeapon] = now;
       scoreHit(targetId);
+    }
+
+    async function handleMedicHeal(targetId) {
+      const target = players[targetId];
+      if (!target) return;
+      if (roomData?.teamCount === 0 || myTeam < 0 || target.team !== myTeam) {
+        setStatus('Medic heals teammates only', 'err');
+        setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
+        return;
+      }
+      if (myAmmo <= 0) {
+        setStatus('No medic charges — find a Medic Arsenal', 'err');
+        playSound('empty');
+        return;
+      }
+      const tHp = target.health || 0;
+      const tMax = target.maxHealth || 1;
+      const alreadyFull = target.alive !== false && tHp >= tMax;
+
+      try {
+        const mySnap = await get(ref(db, `rooms/${roomCode}/players/${myId}/ammo`));
+        const newCharges = Math.max(0, (mySnap.val() || 0) - 1);
+        const updates = {
+          [`rooms/${roomCode}/players/${myId}/ammo`]: newCharges
+        };
+
+        if (alreadyFull) {
+          await update(ref(db), updates);
+          myAmmo = newCharges;
+          updateHud();
+          setStatus(`${target.name} already at full HP — charge wasted`, 'err');
+          playSound('empty');
+          return;
+        }
+
+        const newHp = Math.min(tMax, tHp + 1);
+        const wasDown = target.alive === false;
+        updates[`rooms/${roomCode}/players/${targetId}/health`] = newHp;
+        updates[`rooms/${roomCode}/players/${targetId}/alive`] = true;
+        if (wasDown) {
+          const sw = roomData?.startWeapon || 'pistol';
+          const sa = roomData?.startingAmmo ?? 3;
+          updates[`rooms/${roomCode}/players/${targetId}/weapon`] = sw === 'none' ? null : 'pistol';
+          updates[`rooms/${roomCode}/players/${targetId}/ammo`] = sw === 'none' ? 0 : sa;
+        }
+        const healScore = roomData?.healScore ?? 1;
+        if (healScore > 0) {
+          const sSnap = await get(ref(db, `rooms/${roomCode}/players/${myId}/score`));
+          updates[`rooms/${roomCode}/players/${myId}/score`] = (sSnap.val() || 0) + healScore;
+        }
+        const hSnap = await get(ref(db, `rooms/${roomCode}/players/${myId}/heals`));
+        updates[`rooms/${roomCode}/players/${myId}/heals`] = (hSnap.val() || 0) + 1;
+
+        await update(ref(db), updates);
+        myAmmo = newCharges;
+        updateHud();
+
+        const toast = $('hitToast');
+        toast.textContent = wasDown ? `✚ Revived ${target.name}!` : `✚ Healed ${target.name} +1 HP`;
+        toast.className = 'hit-toast active';
+        toast.style.borderColor = '#4ade80';
+        setTimeout(() => { toast.className = 'hit-toast'; toast.style.borderColor = ''; }, 1500);
+        playSound('heal');
+        if (navigator.vibrate) navigator.vibrate([40, 20, 40, 20, 40]);
+
+        const hitKey = 'h_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+        await set(ref(db, `rooms/${roomCode}/hits/${hitKey}`), {
+          type: 'heal',
+          shooterId: myId, shooterName: myName,
+          victimId: targetId, victimName: target.name,
+          timestamp: serverTimestamp(),
+          seenBy: { [myId]: true }
+        });
+      } catch (err) {
+        setStatus('Heal failed', 'err');
+      }
     }
 
     async function handleAmmoScan(raw) {
@@ -1777,7 +2034,10 @@
       if (parts.length < 3) { setStatus('Invalid Arsenal QR', 'err'); return; }
       const targetRoom = parts[0];
       const arsenalId = parts[1];
-      const amount = parseInt(parts[2]);
+      const third = parts[2];
+      const weaponType = (parts.length >= 4) ? third : 'pistol';
+      const amount = (parts.length >= 4) ? parseInt(parts[3]) : parseInt(third);
+
       if (targetRoom !== roomCode) {
         setStatus('Arsenal is for a different room', 'err');
         return;
@@ -1786,10 +2046,57 @@
         setStatus('Invalid ammo amount', 'err');
         return;
       }
+      if (!WEAPONS[weaponType]) {
+        setStatus('Unknown weapon type', 'err');
+        return;
+      }
       if (roomData?.state !== 'active') {
         setStatus('Game not active', 'err');
         return;
       }
+
+      const meP = players[myId] || {};
+      const isDead = roomData?.healthEnabled && meP.alive === false;
+      const wDef = WEAPONS[weaponType];
+
+      if (isDead) {
+        if (wDef.type !== 'selfheal') {
+          setStatus('Eliminated — only Self-Heal QRs work', 'err');
+          return;
+        }
+        if (!roomData?.selfHealAllowed) {
+          setStatus('Self-heal disabled — wait for a medic', 'err');
+          return;
+        }
+        const now = Date.now();
+        const lastClaim = lastArsenalScans[arsenalId] || 0;
+        if ((now - lastClaim) < ARSENAL_COOLDOWN_MS) {
+          const wait = Math.ceil((ARSENAL_COOLDOWN_MS - (now - lastClaim)) / 1000);
+          setStatus(`Self-Heal cooldown — ${wait}s`, 'err');
+          return;
+        }
+        lastArsenalScans[arsenalId] = now;
+        try {
+          const sw = roomData?.startWeapon || 'pistol';
+          const sa = roomData?.startingAmmo ?? 3;
+          await update(ref(db), {
+            [`rooms/${roomCode}/players/${myId}/health`]: 1,
+            [`rooms/${roomCode}/players/${myId}/alive`]: true,
+            [`rooms/${roomCode}/players/${myId}/weapon`]: sw === 'none' ? null : 'pistol',
+            [`rooms/${roomCode}/players/${myId}/ammo`]: sw === 'none' ? 0 : sa
+          });
+          setStatus('Revived! Back in the game', 'ok');
+          playSound('heal');
+          if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 100]);
+        } catch (e) { setStatus('Self-heal failed', 'err'); }
+        return;
+      }
+
+      if (wDef.type === 'selfheal') {
+        setStatus('You\'re not eliminated', 'err');
+        return;
+      }
+
       const now = Date.now();
       const lastClaim = lastArsenalScans[arsenalId] || 0;
       if ((now - lastClaim) < ARSENAL_COOLDOWN_MS) {
@@ -1800,22 +2107,31 @@
       lastArsenalScans[arsenalId] = now;
 
       try {
-        const snap = await get(ref(db, `rooms/${roomCode}/players/${myId}/ammo`));
-        const newAmmo = (snap.val() || 0) + amount;
-        await set(ref(db, `rooms/${roomCode}/players/${myId}/ammo`), newAmmo);
+        let newAmmo;
+        if (meP.weapon === weaponType) {
+          newAmmo = (meP.ammo || 0) + amount;
+          await update(ref(db), {
+            [`rooms/${roomCode}/players/${myId}/ammo`]: newAmmo
+          });
+          setStatus(`+${amount} ${wDef.name} ammo (total ${newAmmo})`, 'ok');
+        } else {
+          newAmmo = amount;
+          await update(ref(db), {
+            [`rooms/${roomCode}/players/${myId}/weapon`]: weaponType,
+            [`rooms/${roomCode}/players/${myId}/ammo`]: newAmmo
+          });
+          setStatus(`Switched to ${wDef.name} with ${amount} ammo`, 'ok');
+        }
         myAmmo = newAmmo;
+        myWeapon = weaponType;
         updateHud();
-        setStatus(`+${amount} ammo! Total: ${newAmmo}`, 'ok');
-        playSound('reload');
+        playSound(weaponType === 'medic' ? 'heal' : 'reload');
         if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
         const toast = $('hitToast');
-        toast.textContent = `🔋 +${amount} ammo (total ${newAmmo})`;
+        toast.textContent = `${wDef.icon} ${wDef.name} +${amount}`;
         toast.className = 'hit-toast active';
-        toast.style.borderColor = '#fbbf24';
-        setTimeout(() => {
-          toast.className = 'hit-toast';
-          toast.style.borderColor = '';
-        }, 1500);
+        toast.style.borderColor = wDef.color;
+        setTimeout(() => { toast.className = 'hit-toast'; toast.style.borderColor = ''; }, 1500);
       } catch (err) {
         setStatus('Ammo pickup failed', 'err');
       }
@@ -1823,27 +2139,37 @@
 
     async function scoreHit(targetId) {
       const victimName = players[targetId]?.name || 'Player';
+      const w = WEAPONS[myWeapon];
+      const damage = w?.damage || 1;
       try {
         const mySnap = await get(ref(db, `rooms/${roomCode}/players/${myId}`));
         const vSnap = await get(ref(db, `rooms/${roomCode}/players/${targetId}`));
         const meP = mySnap.val() || {};
         const victP = vSnap.val() || {};
-        const newMyScore = (meP.score || 0) + 1;
-        const newMyAmmo = Math.max(0, (meP.ammo || 0) - 1);
-        const newVDeaths = (victP.deaths || 0) + 1;
         const healthEnabled = roomData?.healthEnabled === true;
-        const newVHealth = healthEnabled ? Math.max(0, (victP.health || 1) - 1) : 1;
-        const newVAlive = !healthEnabled || newVHealth > 0;
-        const newVAmmo = (healthEnabled && newVHealth <= 0) ? 0 : (victP.ammo || 0);
+        const vHpBefore = healthEnabled ? (victP.health || 1) : 1;
+        const vHpAfter = Math.max(0, vHpBefore - damage);
+        const eliminated = healthEnabled ? (vHpAfter <= 0) : true;
+        const newVAlive = !eliminated;
+
+        const actualDamageScored = damage;
+        const newMyScore = (meP.score || 0) + actualDamageScored;
+        const newMyAmmo = Math.max(0, (meP.ammo || 0) - 1);
+        const newVDeaths = eliminated ? (victP.deaths || 0) + 1 : (victP.deaths || 0);
 
         const updates = {
           [`rooms/${roomCode}/players/${myId}/score`]: newMyScore,
           [`rooms/${roomCode}/players/${myId}/ammo`]: newMyAmmo,
           [`rooms/${roomCode}/players/${targetId}/deaths`]: newVDeaths,
-          [`rooms/${roomCode}/players/${targetId}/health`]: newVHealth,
-          [`rooms/${roomCode}/players/${targetId}/alive`]: newVAlive,
-          [`rooms/${roomCode}/players/${targetId}/ammo`]: newVAmmo
+          [`rooms/${roomCode}/players/${targetId}/health`]: vHpAfter,
+          [`rooms/${roomCode}/players/${targetId}/alive`]: newVAlive
         };
+
+        if (eliminated && roomData?.loseWeaponOnDeath !== false) {
+          updates[`rooms/${roomCode}/players/${targetId}/weapon`] = null;
+          updates[`rooms/${roomCode}/players/${targetId}/ammo`] = 0;
+        }
+
         await update(ref(db), updates);
 
         myAmmo = newMyAmmo;
@@ -1851,22 +2177,29 @@
 
         const hitKey = 'h_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
         await set(ref(db, `rooms/${roomCode}/hits/${hitKey}`), {
+          type: 'hit',
+          weapon: myWeapon,
+          damage: damage,
           shooterId: myId, shooterName: myName,
           victimId: targetId, victimName,
           timestamp: serverTimestamp(),
           seenBy: { [myId]: true }
         });
-        showHitFlash(victimName, !newVAlive);
-        playSound('hit');
+        showHitFlash(victimName, eliminated, damage, w);
+        playSound(eliminated ? 'eliminate' : 'hit');
       } catch (err) { setStatus('Hit failed', 'err'); }
     }
 
-    function showHitFlash(victimName, eliminated) {
+    function showHitFlash(victimName, eliminated, damage, w) {
       const flash = $('flash');
       flash.className = 'flash hit-flash active';
       setTimeout(() => flash.className = 'flash', 100);
       const toast = $('hitToast');
-      toast.textContent = eliminated ? `💀 Eliminated ${victimName}! +1` : `🎯 Tagged ${victimName}! +1`;
+      const icon = w?.icon || '🎯';
+      const dmgStr = damage > 1 ? ` (-${damage} HP)` : '';
+      toast.textContent = eliminated
+        ? `💀 Eliminated ${victimName}!${dmgStr}`
+        : `${icon} Hit ${victimName}${dmgStr}`;
       toast.className = 'hit-toast active';
       setTimeout(() => toast.className = 'hit-toast', 1500);
       if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
@@ -2112,16 +2445,61 @@
     });
 
     function updateHud() {
-      const ammoEl = $('ammoCount');
-      if (ammoEl) {
-        ammoEl.textContent = myAmmo;
-        ammoEl.className = 'ammo-count' + (myAmmo === 0 ? ' zero' : myAmmo <= 2 ? ' low' : '');
+      const hud = $('weaponHud');
+      const icon = $('weaponIcon');
+      const name = $('weaponName');
+      const ammoEl = $('weaponAmmo');
+      const p = players[myId];
+      const alive = !p || p.alive !== false;
+      if (!hud) return;
+
+      if (!alive) {
+        hud.className = 'weapon-hud none';
+        icon.textContent = '💀';
+        name.textContent = 'Eliminated';
+        ammoEl.textContent = '–';
+      } else if (!myWeapon) {
+        hud.className = 'weapon-hud none';
+        icon.textContent = '👐';
+        name.textContent = 'No weapon';
+        ammoEl.textContent = '–';
+      } else {
+        const w = WEAPONS[myWeapon];
+        if (!w) {
+          hud.className = 'weapon-hud none';
+          icon.textContent = '❓';
+          name.textContent = '?';
+          ammoEl.textContent = '–';
+        } else {
+          const isMedic = myWeapon === 'medic';
+          const ammoClass = myAmmo === 0 ? 'zero' : myAmmo <= 2 ? 'low' : '';
+          hud.className = 'weapon-hud ' + ammoClass + (isMedic ? ' medic' : '');
+          icon.textContent = w.icon;
+          name.textContent = w.name;
+          ammoEl.textContent = myAmmo;
+        }
       }
-      const hpEl = $('hpCount');
-      if (hpEl) {
-        const hp = players[myId]?.health ?? myHealth;
-        const alive = players[myId]?.alive !== false;
-        hpEl.textContent = alive ? hp : '💀';
+
+      const hpHud = $('hpHud');
+      const hearts = $('hpHearts');
+      if (hpHud && hearts) {
+        if (!roomData?.healthEnabled) {
+          hpHud.style.display = 'none';
+        } else {
+          hpHud.style.display = 'flex';
+          const hp = p?.health ?? myHealth;
+          const maxHp = p?.maxHealth ?? roomData?.startingHp ?? 3;
+          if (!alive) {
+            hearts.innerHTML = '<span class="hp-dead">💀</span>';
+          } else {
+            const bits = [];
+            for (let i = 0; i < maxHp; i++) {
+              const dimClass = i < hp ? '' : ' dim';
+              bits.push(`<span class="hp-heart${dimClass}">❤️</span>`);
+            }
+            hearts.innerHTML = bits.join('');
+          }
+        }
       }
     }
 
@@ -2160,9 +2538,11 @@
       if (roomData?.richSound) { playRichSound(name); return; }
       switch (name) {
         case 'hit': beep(880, 80, 'square', 0.18); setTimeout(() => beep(1320, 60, 'square', 0.14), 60); break;
+        case 'eliminate': beep(880, 80, 'square', 0.20); setTimeout(() => beep(1320, 80, 'square', 0.16), 60); setTimeout(() => beep(440, 180, 'sawtooth', 0.18), 160); break;
         case 'victim': beep(220, 180, 'sawtooth', 0.22); break;
         case 'empty': beep(140, 180, 'sawtooth', 0.18); break;
         case 'reload': beep(660, 80, 'sine', 0.15); setTimeout(() => beep(880, 80, 'sine', 0.15), 80); break;
+        case 'heal': beep(523, 90, 'sine', 0.14); setTimeout(() => beep(784, 90, 'sine', 0.14), 90); setTimeout(() => beep(1047, 140, 'sine', 0.16), 180); break;
         case 'tick': beep(440, 40, 'sine', 0.08); break;
         case 'end': beep(523, 150, 'sine'); setTimeout(() => beep(659, 150, 'sine'), 150); setTimeout(() => beep(784, 300, 'sine'), 300); break;
       }
@@ -2171,9 +2551,11 @@
     function playRichSound(name) {
       switch (name) {
         case 'hit': beep(700, 60, 'square', 0.22); setTimeout(() => beep(1100, 60, 'square', 0.18), 50); setTimeout(() => beep(1500, 80, 'square', 0.14), 110); break;
+        case 'eliminate': beep(700, 60, 'square', 0.22); setTimeout(() => beep(1100, 60, 'square', 0.20), 50); setTimeout(() => beep(300, 220, 'sawtooth', 0.22), 120); break;
         case 'victim': beep(180, 120, 'sawtooth', 0.24); setTimeout(() => beep(120, 200, 'sawtooth', 0.22), 120); break;
         case 'empty': beep(110, 100, 'square', 0.20); setTimeout(() => beep(90, 150, 'square', 0.18), 110); break;
         case 'reload': beep(500, 60, 'triangle', 0.14); setTimeout(() => beep(700, 60, 'triangle', 0.14), 70); setTimeout(() => beep(900, 90, 'triangle', 0.16), 140); break;
+        case 'heal': beep(440, 80, 'triangle', 0.14); setTimeout(() => beep(660, 80, 'triangle', 0.14), 80); setTimeout(() => beep(880, 80, 'triangle', 0.14), 160); setTimeout(() => beep(1175, 160, 'triangle', 0.18), 240); break;
         case 'tick': beep(600, 50, 'sine', 0.12); break;
         case 'end': beep(523, 120, 'triangle'); setTimeout(() => beep(659, 120, 'triangle'), 120); setTimeout(() => beep(784, 120, 'triangle'), 240); setTimeout(() => beep(1047, 400, 'triangle'), 360); break;
       }
@@ -2190,45 +2572,60 @@
 
     function openArsenalSheet() {
       if (!roomCode) return;
-      const sizes = [1, 2, 3, 5, 10];
+
+      const sections = [
+        { key: 'pistol',   icon: '🔫', name: 'Pistol',   color: '#fbbf24', sizes: [3, 5, 10] },
+        { key: 'shotgun',  icon: '💥', name: 'Shotgun',  color: '#f97316', sizes: [2, 3, 5] },
+        { key: 'sniper',   icon: '🎯', name: 'Sniper',   color: '#a855f7', sizes: [1, 2, 3] },
+        { key: 'uzi',      icon: '⚡', name: 'Uzi',      color: '#06b6d4', sizes: [5, 10, 20] },
+        { key: 'medic',    icon: '✚',  name: 'Medic kit', color: '#4ade80', sizes: [1, 2, 3] },
+        { key: 'selfheal', icon: '➕', name: 'Self-Heal', color: '#4ade80', sizes: [1] }
+      ];
+
+      const sectionsHtml = sections.map((s, si) => {
+        const cards = s.sizes.flatMap((n, szI) => {
+          return [1, 2].map(copy => {
+            const arsenalId = 'a_' + s.key + '_' + szI + '_' + copy;
+            const payload = `TAGSHOT_AMMO::${roomCode}:${arsenalId}:${s.key}:${n}`;
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=520x520&margin=8&data=${encodeURIComponent(payload)}`;
+            return `<div class="card" style="border-color:${s.color};">
+              <h2 style="color:${s.color};">${s.icon} ${s.name}</h2>
+              <div class="amt">+${n}</div>
+              <img src="${qrUrl}" alt="${s.name} QR" />
+              <div class="hint">Gives ${n} ${s.key === 'medic' ? 'charge' : 'shot'}${n !== 1 ? 's' : ''}</div>
+              <div class="code">${arsenalId}</div>
+            </div>`;
+          });
+        }).join('');
+        return `<div class="section" style="page-break-before:${si === 0 ? 'auto' : 'always'};">
+          <h1 style="color:${s.color};">${s.icon} ${s.name} Arsenal — Room ${roomCode}</h1>
+          <div class="sub">${s.key === 'selfheal' ? 'Place sparingly — for eliminated players to revive themselves.' : s.key === 'medic' ? 'Place in safe zones — for medics to collect charges.' : 'Place around the venue.'} 60-second cooldown per QR per player.</div>
+          <div class="grid">${cards}</div>
+        </div>`;
+      }).join('');
+
       const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>TagShot Arsenal — Room ${roomCode}</title>
 <style>
-body { font-family: system-ui, sans-serif; background: white; color: black; padding: 20px; }
+body { font-family: system-ui, sans-serif; background: white; color: black; padding: 20px; margin: 0; }
 h1 { font-size: 20px; margin-bottom: 6px; }
 .sub { color: #666; font-size: 13px; margin-bottom: 20px; }
+.section { margin-bottom: 40px; }
 .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-.card { border: 2px dashed #999; border-radius: 12px; padding: 14px; text-align: center; break-inside: avoid; page-break-inside: avoid; }
-.card h2 { font-size: 18px; margin-bottom: 4px; color: #c2410c; }
+.card { border: 3px dashed #999; border-radius: 12px; padding: 14px; text-align: center; break-inside: avoid; page-break-inside: avoid; }
+.card h2 { font-size: 17px; margin-bottom: 4px; }
 .card .amt { font-size: 36px; font-weight: 800; color: #000; margin: 4px 0 10px; }
 .card img { width: 100%; max-width: 220px; height: auto; }
 .card .hint { font-size: 11px; color: #888; margin-top: 6px; }
-.card .code { font-size: 10px; color: #999; font-family: monospace; margin-top: 2px; }
+.card .code { font-size: 9px; color: #aaa; font-family: monospace; margin-top: 2px; }
 .noprint { margin-top: 30px; padding: 14px; background: #f3f4f6; border-radius: 8px; font-size: 13px; }
 @media print { .noprint { display: none; } body { padding: 10px; } .grid { gap: 10px; } }
 </style></head>
 <body>
-<h1>🔫 Arsenal QR sheet — Room ${roomCode}</h1>
-<div class="sub">Print on A4, cut along dashed lines, post around your venue. Each QR has a 60-second cooldown per player.</div>
-<div class="grid">
-${sizes.flatMap((n, si) => {
-  return [1, 2].map(copy => {
-    const arsenalId = 'a' + si + '_' + copy;
-    const payload = `TAGSHOT_AMMO::${roomCode}:${arsenalId}:${n}`;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=520x520&margin=8&data=${encodeURIComponent(payload)}`;
-    return `<div class="card">
-      <h2>🔋 Ammo Pack</h2>
-      <div class="amt">+${n}</div>
-      <img src="${qrUrl}" alt="Ammo QR" />
-      <div class="hint">Gives ${n} shot${n !== 1 ? 's' : ''}</div>
-      <div class="code">${arsenalId}</div>
-    </div>`;
-  });
-}).join('')}
+<div class="noprint" style="margin-bottom:20px;">
+<strong>How to use:</strong> Each section below is a printable page for a different weapon. Print the pages you want. Cut the cards and stick them around your play area.
+<br><br><button onclick="window.print()" style="padding:10px 20px;font-size:15px;">🖨️ Print</button>
 </div>
-<div class="noprint">
-<strong>How to use:</strong> Print this page on A4 paper. Cut the cards and stick them around your play area (walls, tables, posts). During a game, a player scans an ammo QR to pick it up. After 60 seconds the same QR can be scanned again (by the same or different player).
-<br><br><button onclick="window.print()" style="padding:10px 20px;font-size:15px;">🖨️ Print this page</button>
-</div>
+${sectionsHtml}
 </body></html>`;
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
