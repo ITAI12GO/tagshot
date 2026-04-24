@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%237f1d1d'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%F0%9F%8E%AF%3C/text%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='32' fill='%237f1d1d'/%3E%3Ctext x='90' y='122' font-size='104' text-anchor='middle'%3E%F0%9F%8E%AF%3C/text%3E%3C/svg%3E">
-  <title>TagShot — Phase 5B.3a (Admin URL fix)</title>
+  <title>TagShot v5B.3b</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; overscroll-behavior: none; }
@@ -665,6 +665,45 @@
     }
     .conn-pill.ok { background: #15803d; color: white; }
     .conn-pill.off { background: #7c2d12; color: white; }
+
+    /* Version tag — compact, unobtrusive */
+    .version-tag {
+      display: inline-block; padding: 2px 8px; border-radius: 6px;
+      background: #1e1e1e; color: #666;
+      font-size: 11px; font-family: ui-monospace, monospace;
+      border: 1px solid #2a2a2a;
+    }
+
+    /* Stepper component (replaces sliders for +/- incrementing) */
+    .stepper {
+      display: flex; align-items: center; gap: 8px;
+      width: 100%; margin-top: 4px;
+    }
+    .stepper-btn {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: #2a2a2a; color: white; border: 1px solid #3a3a3a;
+      font-size: 18px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; user-select: none;
+      flex-shrink: 0;
+    }
+    .stepper-btn:active { background: #3a3a3a; transform: scale(0.95); }
+    .stepper-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .stepper-input {
+      flex: 1; text-align: center;
+      background: #1e1e1e; color: white;
+      border: 1px solid #333; border-radius: 8px;
+      padding: 8px; font-size: 16px; font-weight: 600;
+      font-family: ui-monospace, monospace;
+      min-width: 0;
+      -webkit-appearance: none; -moz-appearance: textfield;
+    }
+    .stepper-input::-webkit-outer-spin-button,
+    .stepper-input::-webkit-inner-spin-button {
+      -webkit-appearance: none; margin: 0;
+    }
+    .stepper.stepper-compact .stepper-btn { width: 28px; height: 28px; font-size: 15px; }
+    .stepper.stepper-compact .stepper-input { padding: 4px; font-size: 14px; }
   </style>
 </head>
 <body>
@@ -675,7 +714,7 @@
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="font-size: 56px;">🎯</div>
       <div class="h1">TagShot</div>
-      <div class="sub">Phase 5B.3a · Admin URL fix · v20260420_1748<br><span class="conn-pill off" id="landingConn">Connecting…</span></div>
+      <div class="sub"><span class="version-tag">v5B.3b</span> <span class="conn-pill off" id="landingConn">Connecting…</span></div>
     </div>
 
     <button class="btn primary" id="toCreateBtn">🏠 Create Room</button>
@@ -720,13 +759,10 @@
       <button class="btn ghost" style="width:auto;padding:8px 12px;margin:0;" onclick="goLanding()">←</button>
       <div class="h1" style="margin:0;">Create Room</div>
     </div>
-    <div class="sub">You'll be the host. Share the room code and password with players.</div>
+    <div class="sub">You'll be the host. Share the room code with players.</div>
 
     <label class="label">Your name</label>
     <input class="input" id="hostName" placeholder="e.g. Host" maxlength="20">
-
-    <label class="label">Host password (4–12 characters)</label>
-    <input class="input pw-input" id="hostPw" placeholder="Set a password" maxlength="12">
 
     <label class="label">Access code (6 digits)</label>
     <input class="input pw-input" id="createAccessCode" placeholder="From game owner" maxlength="6" inputmode="numeric" pattern="[0-9]*">
@@ -755,7 +791,6 @@
     <div class="room-code-display">
       <div class="label">Room code</div>
       <div class="code" id="lobbyRoomCode">----</div>
-      <div class="pw" id="lobbyPwHint"></div>
     </div>
 
     <div class="card" id="hostSettingsCard" style="display:none;">
@@ -805,7 +840,11 @@
         </div>
 
         <label class="label" style="margin-top:10px;">Starting ammo (if Pistol start) <span id="startAmmoVal" style="color:#fbbf24;font-family:monospace;">3</span></label>
-        <input type="range" id="startAmmoRange" min="0" max="20" step="1" value="3" style="width:100%;">
+        <div class="stepper">
+          <button class="stepper-btn stepper-minus" type="button">−</button>
+          <input type="number" id="startAmmoRange" min="0" max="20" step="1" value="3" class="stepper-input" readonly>
+          <button class="stepper-btn stepper-plus" type="button">+</button>
+        </div>
 
         <div class="toggle-row">
           <div class="tl">Per-weapon cooldowns<br><span class="sub">Sniper 5s, Shotgun 2s between shots.</span></div>
@@ -821,7 +860,11 @@
         </div>
         <div id="ammoCapRow" style="display:none;">
           <label class="label">Max ammo per weapon <span id="ammoCapVal" style="color:#fbbf24;font-family:monospace;">3</span></label>
-          <input type="range" id="ammoCapRange" min="1" max="20" step="1" value="3" style="width:100%;">
+          <div class="stepper">
+            <button class="stepper-btn stepper-minus" type="button">−</button>
+            <input type="number" id="ammoCapRange" min="1" max="20" step="1" value="3" class="stepper-input" readonly>
+            <button class="stepper-btn stepper-plus" type="button">+</button>
+          </div>
           <div style="font-size:11px;color:#666;margin-top:4px;">Applies to Pistol / Shotgun / Sniper / Uzi. Medic not capped.</div>
         </div>
 
@@ -839,7 +882,11 @@
         </div>
         <div id="healthDetailRow" style="display:none;">
           <label class="label">Starting HP <span id="startHpVal" style="color:#ff3b3b;font-family:monospace;">3</span></label>
-          <input type="range" id="startHpRange" min="1" max="10" step="1" value="3" style="width:100%;">
+          <div class="stepper">
+            <button class="stepper-btn stepper-minus" type="button">−</button>
+            <input type="number" id="startHpRange" min="1" max="10" step="1" value="3" class="stepper-input" readonly>
+            <button class="stepper-btn stepper-plus" type="button">+</button>
+          </div>
         </div>
       </div>
 
@@ -1153,7 +1200,6 @@
     }
 
     let roomCode = null;
-    let roomPassword = null;
     let myId = null;
     let myName = "";
     let isHost = false;
@@ -1216,6 +1262,51 @@
       return String(Math.floor(1000 + Math.random() * 9000));
     }
     function randId() { return 'p_' + Math.random().toString(36).slice(2, 9); }
+
+    // v5B.3b: default player name generator — "tagger" + 3 random digits, no spaces
+    function generateDefaultName() {
+      return 'tagger' + String(Math.floor(100 + Math.random() * 900));
+    }
+
+    // v5B.3b: global stepper click handler (delegated for both static and dynamic steppers)
+    document.addEventListener('click', e => {
+      const btn = e.target.closest('.stepper-btn');
+      if (!btn) return;
+      const stepper = btn.closest('.stepper');
+      if (!stepper) return;
+      const input = stepper.querySelector('.stepper-input');
+      if (!input) return;
+      const dir = btn.classList.contains('stepper-plus') ? 1 : -1;
+      const min = parseFloat(input.min);
+      const max = parseFloat(input.max);
+      const step = parseFloat(input.step) || 1;
+      const cur = parseFloat(input.value) || 0;
+      const newVal = Math.max(min, Math.min(max, cur + dir * step));
+      if (newVal !== cur) {
+        input.value = newVal;
+        // Fire both 'input' (for display updates) and 'change' (for Firebase writes)
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+
+    // v5B.3b: auto-fill default player name + host name on first load
+    // Deferred so validateCreate/validateJoin are defined before we call them
+    setTimeout(() => {
+      const hostInp = $('hostName');
+      const playerInp = $('playerName');
+      if (hostInp && !hostInp.value) hostInp.value = generateDefaultName();
+      if (playerInp && !playerInp.value) playerInp.value = generateDefaultName();
+      if (typeof validateCreate === 'function') validateCreate();
+      if (typeof validateJoin === 'function') validateJoin();
+    }, 0);
+
+    // v5B.3b: auto-clear room code field when tapped (so repeat joiners don't see old value)
+    setTimeout(() => {
+      const inp = $('joinCode');
+      if (!inp) return;
+      inp.addEventListener('focus', () => { inp.value = ''; if (typeof validateJoin === 'function') validateJoin(); });
+    }, 0);
 
     const connRef = ref(db, '.info/connected');
     onValue(connRef, snap => {
@@ -1386,12 +1477,10 @@
     function validateCreate() {
       $('createBtn').disabled = !(
         $('hostName').value.trim().length >= 1 &&
-        $('hostPw').value.trim().length >= 4 &&
         $('createAccessCode').value.trim().length === 6
       );
     }
     $('hostName').addEventListener('input', validateCreate);
-    $('hostPw').addEventListener('input', validateCreate);
     $('createAccessCode').addEventListener('input', e => {
       e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
       $('createAccessErr').style.display = 'none';
@@ -1412,9 +1501,8 @@
 
     $('createBtn').addEventListener('click', async () => {
       const name = $('hostName').value.trim().slice(0, 20);
-      const pw = $('hostPw').value.trim();
       const accessCode = $('createAccessCode').value.trim();
-      if (!name || pw.length < 4 || accessCode.length !== 6) return;
+      if (!name || accessCode.length !== 6) return;
 
       $('createAccessErr').style.display = 'none';
       $('createBtn').disabled = true;
@@ -1475,7 +1563,6 @@
       }
 
       roomCode = code;
-      roomPassword = pw;
       myId = randId();
       myName = name;
       isHost = true;
@@ -1486,7 +1573,6 @@
       const roomRef = ref(db, `rooms/${code}`);
       await set(roomRef, {
         code: code,
-        hostPassword: pw,
         hostId: myId,
         state: 'lobby',
         durationMin: 10,
@@ -1552,11 +1638,25 @@
       isHost = false;
       isSpectator = false;
 
+      // v5B.3b BUG FIX: late-joiners now inherit room config (was hardcoded 1 HP, pistol, 0 ammo)
+      // If game is active: get proper starting values.
+      // If game is in lobby: baseline values (will be reset at game start anyway).
+      const isActive = r.state === 'active';
+      const healthEnabled = r.healthEnabled === true;
+      const startingHp = isActive && healthEnabled ? (r.startingHp ?? 3) : 1;
+      const startWeapon = r.startWeapon || 'pistol';
+      const startingAmmo = r.startingAmmo ?? 3;
+      const capEnabled = r.ammoCapEnabled === true;
+      const cap = r.ammoCap ?? 3;
+      const effAmmo = capEnabled ? Math.min(cap, startingAmmo) : startingAmmo;
+      const initWeapon = isActive ? (startWeapon === 'none' ? null : 'pistol') : 'pistol';
+      const initAmmo = isActive ? (startWeapon === 'none' ? 0 : effAmmo) : 0;
+
       await set(ref(db, `rooms/${code}/players/${myId}`), {
         name: myName, score: 0, deaths: 0, heals: 0,
         isHost: false, isSpectator: false,
-        team: -1, weapon: 'pistol', ammo: 0,
-        health: 1, maxHealth: 1, alive: true,
+        team: -1, weapon: initWeapon, ammo: initAmmo,
+        health: startingHp, maxHealth: startingHp, alive: true,
         joinedAt: serverTimestamp()
       });
       onDisconnect(ref(db, `rooms/${code}/players/${myId}`)).remove();
@@ -1568,12 +1668,10 @@
       showScreen('lobbyScreen');
       $('lobbyRoomCode').textContent = roomCode;
       if (isHost) {
-        $('lobbyPwHint').textContent = 'Password: ' + roomPassword + ' (host only)';
         $('hostSettingsCard').style.display = 'block';
         $('hostButtonsRow').style.display = 'block';
         $('playerWaitingMsg').style.display = 'none';
       } else {
-        $('lobbyPwHint').textContent = '';
         $('hostSettingsCard').style.display = 'none';
         $('hostButtonsRow').style.display = 'none';
         $('playerWaitingMsg').style.display = 'block';
@@ -2274,10 +2372,14 @@
       ];
       el.innerHTML = rows.map(r => {
         const cur = roomData?.[r.field] ?? r.def;
-        return `<div style="display:flex;align-items:center;gap:10px;padding:4px 0;">
+        return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;">
           <span style="font-size:16px;min-width:24px;">${r.icon}</span>
           <span style="flex:1;font-size:12px;">${r.name}</span>
-          <input type="range" min="${r.min}" max="${r.max}" step="1" value="${cur}" data-univ-field="${r.field}" class="univ-amt-input" style="flex:2;">
+          <div class="stepper stepper-compact" style="flex:2;max-width:160px;">
+            <button class="stepper-btn stepper-minus" type="button">−</button>
+            <input type="number" min="${r.min}" max="${r.max}" step="1" value="${cur}" data-univ-field="${r.field}" class="univ-amt-input stepper-input" readonly>
+            <button class="stepper-btn stepper-plus" type="button">+</button>
+          </div>
           <span data-univ-val="${r.field}" style="font-family:monospace;color:#22d3ee;min-width:24px;text-align:right;font-weight:600;font-size:12px;">${cur}</span>
         </div>`;
       }).join('');
@@ -2314,7 +2416,11 @@
         return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;">
           <span style="font-size:18px;min-width:28px;">${w.icon}</span>
           <span style="flex:1;font-size:13px;">${w.name}</span>
-          <input type="range" min="1" max="10" step="1" value="${cur}" data-weapon="${k}" class="weapon-dmg-input" style="flex:2;">
+          <div class="stepper stepper-compact" style="flex:2;max-width:160px;">
+            <button class="stepper-btn stepper-minus" type="button">−</button>
+            <input type="number" min="1" max="10" step="1" value="${cur}" data-weapon="${k}" class="weapon-dmg-input stepper-input" readonly>
+            <button class="stepper-btn stepper-plus" type="button">+</button>
+          </div>
           <span class="weapon-dmg-val" data-weapon-val="${k}" style="font-family:monospace;color:#fbbf24;min-width:28px;text-align:right;font-weight:600;">${cur}</span>
         </div>`;
       }).join('');
@@ -2339,11 +2445,15 @@
       const endsAt = durMin === 0 ? null : Date.now() + durMin * 60 * 1000;
       lastArsenalScans = {};
       lastWeaponFire = {};
+      // v5B.3b: snapshot non-spectator player count for sudden-death detection
+      const activeCount = Object.values(players).filter(p => !p.isSpectator).length;
+      const twoPlayerMode = (activeCount === 2);
       await update(ref(db, `rooms/${roomCode}`), {
         state: 'active',
         startedAt: Date.now(),
         endsAt: endsAt,
-        durationMin: durMin
+        durationMin: durMin,
+        twoPlayerMode: twoPlayerMode
       });
       const startingAmmo = roomData?.startingAmmo ?? 3;
       const startWeapon = roomData?.startWeapon || 'pistol';
@@ -2589,7 +2699,7 @@
       if (dashRepaintInterval) { clearInterval(dashRepaintInterval); dashRepaintInterval = null; }
       stopCooldownTicker();
       stopLocationTracking();
-      roomCode = null; myId = null; roomPassword = null;
+      roomCode = null; myId = null;
     }
     $('lobbyLeaveBtn').addEventListener('click', () => { if (confirm('Leave room?')) leaveRoom(); });
     $('gameLeaveBtn').addEventListener('click', () => { if (confirm('Leave game?')) leaveRoom(); });
@@ -3184,6 +3294,13 @@
         if (eliminated && roomData?.loseWeaponOnDeath !== false) {
           updates[`rooms/${roomCode}/players/${targetId}/weapon`] = null;
           updates[`rooms/${roomCode}/players/${targetId}/ammo`] = 0;
+        }
+
+        // v5B.3b: 2-player sudden-death — if exactly 2 players at game start AND self-heal off,
+        // any elimination ends the game immediately.
+        if (eliminated && roomData?.twoPlayerMode === true && !roomData?.selfHealAllowed) {
+          updates[`rooms/${roomCode}/state`] = 'ended';
+          updates[`rooms/${roomCode}/endedAt`] = Date.now();
         }
 
         await update(ref(db), updates);
