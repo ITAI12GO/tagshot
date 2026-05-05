@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%237f1d1d'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%F0%9F%8E%AF%3C/text%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='32' fill='%237f1d1d'/%3E%3Ctext x='90' y='122' font-size='104' text-anchor='middle'%3E%F0%9F%8E%AF%3C/text%3E%3C/svg%3E">
-  <title>TagShot v5B.3b</title>
+  <title>TagShot v5C.1</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; overscroll-behavior: none; }
@@ -666,7 +666,6 @@
     .conn-pill.ok { background: #15803d; color: white; }
     .conn-pill.off { background: #7c2d12; color: white; }
 
-    /* Version tag — compact, unobtrusive */
     .version-tag {
       display: inline-block; padding: 2px 8px; border-radius: 6px;
       background: #1e1e1e; color: #666;
@@ -674,7 +673,6 @@
       border: 1px solid #2a2a2a;
     }
 
-    /* Stepper component (replaces sliders for +/- incrementing) */
     .stepper {
       display: flex; align-items: center; gap: 8px;
       width: 100%; margin-top: 4px;
@@ -684,11 +682,9 @@
       background: #2a2a2a; color: white; border: 1px solid #3a3a3a;
       font-size: 18px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
-      cursor: pointer; user-select: none;
-      flex-shrink: 0;
+      cursor: pointer; user-select: none; flex-shrink: 0;
     }
     .stepper-btn:active { background: #3a3a3a; transform: scale(0.95); }
-    .stepper-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .stepper-input {
       flex: 1; text-align: center;
       background: #1e1e1e; color: white;
@@ -714,7 +710,7 @@
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="font-size: 56px;">🎯</div>
       <div class="h1">TagShot</div>
-      <div class="sub"><span class="version-tag">v5B.3b</span> <span class="conn-pill off" id="landingConn">Connecting…</span></div>
+      <div class="sub"><span class="version-tag">v5C.1</span> <span class="conn-pill off" id="landingConn">Connecting…</span></div>
     </div>
 
     <button class="btn primary" id="toCreateBtn">🏠 Create Room</button>
@@ -921,6 +917,17 @@
       <div class="toggle-row">
         <div class="tl">Rich sound pack<br><span class="sub">Better effects (optional, more data).</span></div>
         <label class="switch"><input type="checkbox" id="richSoundToggle"><span class="slider"></span></label>
+      </div>
+
+      <!-- v5C.1: Badge Mode — pre-printed badges instead of generated QRs -->
+      <div class="toggle-row">
+        <div class="tl">🎫 Badge Mode<br><span class="sub">Use pre-printed badges (TAGSHOT-BADGE-NNN). Players claim a badge after joining.</span></div>
+        <label class="switch"><input type="checkbox" id="badgeModeToggle"><span class="slider"></span></label>
+      </div>
+      <div id="badgeAssignmentsRow" style="display:none;margin-top:8px;padding:10px;background:#1a1a1a;border-radius:8px;">
+        <div style="font-size:13px;font-weight:600;color:#22d3ee;margin-bottom:8px;">Active badge assignments</div>
+        <div id="badgeAssignmentList" style="font-size:12px;color:#aaa;">No badges claimed yet</div>
+        <button class="btn ghost" id="releaseAllBadgesBtn" style="margin-top:8px;font-size:13px;padding:8px;">Release all badges</button>
       </div>
 
       <div style="margin-top:12px;">
@@ -1150,6 +1157,28 @@
     <button class="qr-close" id="qrCloseBtn">Close</button>
   </div>
 
+  <!-- v5C.1: Badge Claim screen — appears in Badge Mode after joining a room -->
+  <div class="screen" id="badgeClaimScreen" style="display:none;">
+    <div style="text-align:center;padding:30px 20px 20px;">
+      <div style="font-size:48px;margin-bottom:8px;">🎫</div>
+      <div class="h1" style="margin:0;">Claim Your Badge</div>
+      <div class="sub" style="margin:6px auto;max-width:300px;">Scan a pre-printed TagShot badge to register it as yours for this room.</div>
+    </div>
+
+    <div style="margin:0 16px;background:#000;border-radius:14px;overflow:hidden;position:relative;height:55vh;max-height:400px;">
+      <video id="badgeClaimVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;"></video>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:200px;height:200px;border:2px solid rgba(34,211,238,0.5);border-radius:12px;pointer-events:none;"></div>
+    </div>
+
+    <div id="badgeClaimStatus" style="text-align:center;padding:14px;color:#aaa;font-size:14px;">Point camera at a TagShot badge…</div>
+
+    <div id="badgeClaimedBox" style="display:none;text-align:center;padding:20px;">
+      <div style="font-size:48px;color:#4ade80;">✓</div>
+      <div style="font-size:18px;font-weight:600;margin-top:8px;">You are <span id="badgeClaimedNumber" style="color:#22d3ee;font-family:monospace;">--</span></div>
+      <button class="btn primary" id="badgeClaimContinueBtn" style="margin-top:16px;">Continue to Lobby →</button>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -1172,6 +1201,7 @@
     const HIT_COOLDOWN_MS = 3000;
     const QR_PREFIX = "TAGSHOT::";
     const AMMO_QR_PREFIX = "TAGSHOT_AMMO::";
+    const BADGE_QR_PREFIX = "TAGSHOT-BADGE-";  // v5C.1: pre-printed badges, e.g. TAGSHOT-BADGE-001
     const UNIV_QR_PREFIX = "TAGSHOT_UNIV::";
     const ARSENAL_COOLDOWN_MS = 60000;
     const BASE_URL = location.origin + location.pathname;
@@ -1263,12 +1293,12 @@
     }
     function randId() { return 'p_' + Math.random().toString(36).slice(2, 9); }
 
-    // v5B.3b: default player name generator — "tagger" + 3 random digits, no spaces
+    // v5B.3b: default name generator — "tagger" + 3 random digits, no spaces
     function generateDefaultName() {
       return 'tagger' + String(Math.floor(100 + Math.random() * 900));
     }
 
-    // v5B.3b: global stepper click handler (delegated for both static and dynamic steppers)
+    // v5B.3b: global stepper click handler (delegated, works for both static and dynamic steppers)
     document.addEventListener('click', e => {
       const btn = e.target.closest('.stepper-btn');
       if (!btn) return;
@@ -1284,14 +1314,12 @@
       const newVal = Math.max(min, Math.min(max, cur + dir * step));
       if (newVal !== cur) {
         input.value = newVal;
-        // Fire both 'input' (for display updates) and 'change' (for Firebase writes)
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
       }
     });
 
-    // v5B.3b: auto-fill default player name + host name on first load
-    // Deferred so validateCreate/validateJoin are defined before we call them
+    // v5B.3b: defer init until validators + listeners exist
     setTimeout(() => {
       const hostInp = $('hostName');
       const playerInp = $('playerName');
@@ -1301,11 +1329,13 @@
       if (typeof validateJoin === 'function') validateJoin();
     }, 0);
 
-    // v5B.3b: auto-clear room code field when tapped (so repeat joiners don't see old value)
     setTimeout(() => {
       const inp = $('joinCode');
       if (!inp) return;
-      inp.addEventListener('focus', () => { inp.value = ''; if (typeof validateJoin === 'function') validateJoin(); });
+      inp.addEventListener('focus', () => {
+        inp.value = '';
+        if (typeof validateJoin === 'function') validateJoin();
+      });
     }, 0);
 
     const connRef = ref(db, '.info/connected');
@@ -1604,6 +1634,7 @@
         univMedicAmt: 1,
         univSelfHealHp: 1,
         richSound: false,
+        badgeMode: false,
         createdAt: serverTimestamp()
       });
       await set(ref(db, `rooms/${code}/players/${myId}`), {
@@ -1638,9 +1669,7 @@
       isHost = false;
       isSpectator = false;
 
-      // v5B.3b BUG FIX: late-joiners now inherit room config (was hardcoded 1 HP, pistol, 0 ammo)
-      // If game is active: get proper starting values.
-      // If game is in lobby: baseline values (will be reset at game start anyway).
+      // v5B.3b BUG FIX: late-joiners inherit room config (was hardcoded 1 HP / pistol / 0 ammo)
       const isActive = r.state === 'active';
       const healthEnabled = r.healthEnabled === true;
       const startingHp = isActive && healthEnabled ? (r.startingHp ?? 3) : 1;
@@ -1661,8 +1690,114 @@
       });
       onDisconnect(ref(db, `rooms/${code}/players/${myId}`)).remove();
 
+      // v5C.1: If room is in Badge Mode, route to claim screen first
+      if (r.badgeMode === true) {
+        startBadgeClaim();
+        return;
+      }
+
       enterLobby();
     });
+
+    // v5C.1: Badge claim flow ===
+    let badgeClaimStream = null;
+    let badgeClaimRAF = null;
+    let badgeClaimCanvas = null;
+    let badgeClaimCtx = null;
+
+    async function startBadgeClaim() {
+      showScreen('badgeClaimScreen');
+      $('badgeClaimedBox').style.display = 'none';
+      $('badgeClaimStatus').textContent = 'Point camera at a TagShot badge…';
+      $('badgeClaimStatus').style.color = '#aaa';
+      const video = $('badgeClaimVideo');
+      try {
+        badgeClaimStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } }, audio: false
+        });
+        video.srcObject = badgeClaimStream;
+        await video.play();
+        if (!badgeClaimCanvas) {
+          badgeClaimCanvas = document.createElement('canvas');
+          badgeClaimCtx = badgeClaimCanvas.getContext('2d', { willReadFrequently: true });
+        }
+        badgeClaimRAF = requestAnimationFrame(badgeClaimScanLoop);
+      } catch (err) {
+        $('badgeClaimStatus').textContent = 'Camera error: ' + (err.message || err.name);
+        $('badgeClaimStatus').style.color = '#ff6b6b';
+      }
+    }
+
+    function stopBadgeClaim() {
+      if (badgeClaimRAF) { cancelAnimationFrame(badgeClaimRAF); badgeClaimRAF = null; }
+      if (badgeClaimStream) {
+        badgeClaimStream.getTracks().forEach(t => t.stop());
+        badgeClaimStream = null;
+      }
+      const v = $('badgeClaimVideo'); if (v) v.srcObject = null;
+    }
+
+    function badgeClaimScanLoop() {
+      const video = $('badgeClaimVideo');
+      if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
+        badgeClaimCanvas.width = video.videoWidth;
+        badgeClaimCanvas.height = video.videoHeight;
+        badgeClaimCtx.drawImage(video, 0, 0, badgeClaimCanvas.width, badgeClaimCanvas.height);
+        try {
+          const imgData = badgeClaimCtx.getImageData(0, 0, badgeClaimCanvas.width, badgeClaimCanvas.height);
+          const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
+          if (code && code.data) {
+            handleBadgeClaim(code.data);
+          }
+        } catch (e) { /* ignore frame errors */ }
+      }
+      badgeClaimRAF = requestAnimationFrame(badgeClaimScanLoop);
+    }
+
+    async function handleBadgeClaim(raw) {
+      // Expect "TAGSHOT-BADGE-NNN"
+      if (!raw.startsWith(BADGE_QR_PREFIX)) {
+        $('badgeClaimStatus').textContent = 'Not a TagShot badge — try another QR';
+        $('badgeClaimStatus').style.color = '#ff6b6b';
+        return;
+      }
+      const numStr = raw.slice(BADGE_QR_PREFIX.length);
+      const num = parseInt(numStr, 10);
+      if (!Number.isFinite(num) || num < 1 || num > 999) {
+        $('badgeClaimStatus').textContent = 'Invalid badge number';
+        $('badgeClaimStatus').style.color = '#ff6b6b';
+        return;
+      }
+
+      // Pause scanning during the database check to avoid spam
+      if (badgeClaimRAF) { cancelAnimationFrame(badgeClaimRAF); badgeClaimRAF = null; }
+
+      // Check if any other player in this room already claimed this badge
+      const playersSnap = await get(ref(db, `rooms/${roomCode}/players`));
+      const allPlayers = playersSnap.val() || {};
+      const conflict = Object.entries(allPlayers).find(([pid, p]) => pid !== myId && p.badgeNumber === num);
+      if (conflict) {
+        $('badgeClaimStatus').textContent = `Badge ${String(num).padStart(3, '0')} is already used by ${conflict[1].name || 'another player'} — try a different one`;
+        $('badgeClaimStatus').style.color = '#ff6b6b';
+        // Resume scanning after 2s so player can try again
+        setTimeout(() => { if (!badgeClaimRAF) badgeClaimRAF = requestAnimationFrame(badgeClaimScanLoop); }, 2000);
+        return;
+      }
+
+      // Claim it
+      await update(ref(db, `rooms/${roomCode}/players/${myId}`), { badgeNumber: num });
+      $('badgeClaimedNumber').textContent = String(num).padStart(3, '0');
+      $('badgeClaimStatus').textContent = 'Badge claimed!';
+      $('badgeClaimStatus').style.color = '#4ade80';
+      $('badgeClaimedBox').style.display = 'block';
+      stopBadgeClaim();
+    }
+
+    // Continue button after successful claim
+    setTimeout(() => {
+      const btn = $('badgeClaimContinueBtn');
+      if (btn) btn.addEventListener('click', () => enterLobby());
+    }, 0);
 
     function enterLobby() {
       showScreen('lobbyScreen');
@@ -1810,6 +1945,13 @@
         $('univSettingsRow').style.display = r.allowUniversalQr ? 'block' : 'none';
       }
       if (r.richSound != null) $('richSoundToggle').checked = r.richSound;
+
+      // v5C.1: Hydrate badge mode toggle and render assignment list
+      if ($('badgeModeToggle')) {
+        $('badgeModeToggle').checked = r.badgeMode === true;
+        $('badgeAssignmentsRow').style.display = r.badgeMode ? 'block' : 'none';
+        if (r.badgeMode) renderBadgeAssignments();
+      }
       if (r.locEnabled != null) $('locEnableToggle').checked = r.locEnabled;
       if (r.geoFenceEnabled != null) $('geofenceToggle').checked = r.geoFenceEnabled;
       if (r.hostPlays != null) $('hostPlaysToggle').checked = r.hostPlays;
@@ -1844,6 +1986,10 @@
         const badges = [];
         if (p.isHost) badges.push('<span class="team-badge" style="background:#ff3b3b;color:white;">HOST</span>');
         if (p.isSpectator) badges.push('<span class="team-badge" style="background:#555;color:white;">SPEC</span>');
+        // v5C.1: Show badge number when Badge Mode is on
+        if (roomData?.badgeMode && p.badgeNumber != null) {
+          badges.push(`<span class="team-badge" style="background:#0e7490;color:white;font-family:monospace;">#${String(p.badgeNumber).padStart(3,'0')}</span>`);
+        }
         if (!p.isSpectator && tc > 0 && p.team >= 0 && p.team < tc) {
           badges.push(`<span class="team-badge team-${p.team}">${TEAM_NAMES[p.team]}</span>`);
         }
@@ -1892,6 +2038,25 @@
         updates[`rooms/${roomCode}/players/${id}/team`] = -1;
       }
       if (Object.keys(updates).length > 0) await update(ref(db), updates);
+    }
+
+    // v5C.1: Render badge → player mapping in lobby host view
+    function renderBadgeAssignments() {
+      const list = $('badgeAssignmentList');
+      if (!list) return;
+      const claimed = Object.entries(players || {})
+        .filter(([, p]) => p.badgeNumber != null && !p.isSpectator)
+        .sort((a, b) => (a[1].badgeNumber || 0) - (b[1].badgeNumber || 0));
+      if (claimed.length === 0) {
+        list.innerHTML = '<span style="color:#666;">No badges claimed yet</span>';
+        return;
+      }
+      list.innerHTML = claimed.map(([pid, p]) => {
+        const num = String(p.badgeNumber).padStart(3, '0');
+        return `<div style="display:flex;justify-content:space-between;padding:3px 0;">
+          <span><span style="color:#22d3ee;font-family:monospace;">#${num}</span> — ${escapeHtml(p.name || '?')}</span>
+        </div>`;
+      }).join('');
     }
 
     function renderTeamPanel() {
@@ -2349,6 +2514,24 @@
       if (!isHost) return;
       await update(ref(db, `rooms/${roomCode}`), { richSound: e.target.checked });
     });
+
+    // v5C.1: Badge Mode toggle — enables pre-printed badge claim flow
+    $('badgeModeToggle').addEventListener('change', async e => {
+      if (!isHost) return;
+      await update(ref(db, `rooms/${roomCode}`), { badgeMode: e.target.checked });
+      $('badgeAssignmentsRow').style.display = e.target.checked ? 'block' : 'none';
+    });
+
+    // v5C.1: Host releases all badges — clears badgeNumber from all players in room
+    $('releaseAllBadgesBtn').addEventListener('click', async () => {
+      if (!isHost) return;
+      if (!confirm('Release all badge assignments? Players will need to re-claim a badge.')) return;
+      const updates = {};
+      Object.keys(players || {}).forEach(pid => {
+        updates[`rooms/${roomCode}/players/${pid}/badgeNumber`] = null;
+      });
+      if (Object.keys(updates).length > 0) await update(ref(db), updates);
+    });
     $('arsenalPrintBtn').addEventListener('click', () => { if (roomCode) openArsenalSheet(); });
     $('arsenalInGameBtn').addEventListener('click', () => { if (roomCode) openArsenalSheet(); });
     $('arsenalUnivPrintBtn').addEventListener('click', () => openUniversalArsenalSheet());
@@ -2445,7 +2628,7 @@
       const endsAt = durMin === 0 ? null : Date.now() + durMin * 60 * 1000;
       lastArsenalScans = {};
       lastWeaponFire = {};
-      // v5B.3b: snapshot non-spectator player count for sudden-death detection
+      // v5B.3b: snapshot non-spectator count for sudden-death
       const activeCount = Object.values(players).filter(p => !p.isSpectator).length;
       const twoPlayerMode = (activeCount === 2);
       await update(ref(db, `rooms/${roomCode}`), {
@@ -2798,6 +2981,35 @@
         return;
       }
 
+      // v5C.1: Badge QR path — resolve badge number to player ID, then proceed as if it was a player QR
+      if (raw.startsWith(BADGE_QR_PREFIX)) {
+        if (!roomData?.badgeMode) {
+          setStatus('Badge Mode is off in this room', 'err');
+          setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
+          return;
+        }
+        const numStr = raw.slice(BADGE_QR_PREFIX.length);
+        const num = parseInt(numStr, 10);
+        if (!Number.isFinite(num)) {
+          setStatus('Invalid badge', 'err');
+          setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
+          return;
+        }
+        // Find the player who claimed this badge in this room
+        const target = Object.entries(players || {}).find(([pid, p]) => p.badgeNumber === num);
+        if (!target) {
+          setStatus(`Badge ${String(num).padStart(3,'0')} unclaimed`, 'err');
+          scanDebugLog('Badge ' + num + ' not claimed by any player');
+          setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
+          return;
+        }
+        const targetId = target[0];
+        scanDebugLog('→ Badge ' + num + ' = ' + (target[1].name || targetId));
+        // Synthesize as if it was the standard player-QR scan
+        // Reuse the same logic by recursing with the standard format (avoids duplication)
+        return handlePlayerHit(targetId);
+      }
+
       if (!raw.startsWith(QR_PREFIX)) {
         setStatus('Not a TagShot QR', 'err');
         setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
@@ -2812,6 +3024,12 @@
         setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
         return;
       }
+      handlePlayerHit(targetId);
+    }
+
+    // v5C.1: Extracted from handleScan so badge-mode path can reuse it
+    function handlePlayerHit(targetId) {
+      const now = Date.now();
       if (targetId === myId) {
         setStatus('That\'s your own QR!', 'err');
         setTimeout(() => setStatus('Scanning…', 'ok'), 1500);
@@ -3296,8 +3514,7 @@
           updates[`rooms/${roomCode}/players/${targetId}/ammo`] = 0;
         }
 
-        // v5B.3b: 2-player sudden-death — if exactly 2 players at game start AND self-heal off,
-        // any elimination ends the game immediately.
+        // v5B.3b: 2-player sudden-death — first elimination ends the game
         if (eliminated && roomData?.twoPlayerMode === true && !roomData?.selfHealAllowed) {
           updates[`rooms/${roomCode}/state`] = 'ended';
           updates[`rooms/${roomCode}/endedAt`] = Date.now();
@@ -3353,6 +3570,20 @@
 
     $('showQrBtn').addEventListener('click', () => {
       if (!myId || !roomCode) return;
+      // v5C.1: In Badge Mode, show the player's claimed badge number instead of a generated QR
+      const me = players[myId];
+      if (roomData?.badgeMode === true && me?.badgeNumber != null) {
+        const num = String(me.badgeNumber).padStart(3, '0');
+        $('qrModalTitle').textContent = 'Your badge: #' + num;
+        $('qrModalSub').textContent = 'Wear physical badge ' + num + ' — that\'s your target marker.';
+        $('qrImg').src = '';  // hide QR image
+        $('qrImg').style.display = 'none';
+        $('qrPlayerId').textContent = 'Room ' + roomCode + ' · Badge ' + num;
+        $('qrModal').classList.add('active');
+        return;
+      }
+      // Standard QR mode — generate dynamic QR
+      $('qrImg').style.display = '';
       const payload = QR_PREFIX + roomCode + ':' + myId;
       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=520x520&margin=10&data=${encodeURIComponent(payload)}`;
       $('qrModalTitle').textContent = 'Your player badge';
